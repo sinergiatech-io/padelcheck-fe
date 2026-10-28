@@ -80,3 +80,7 @@ La app está orientada al **español** (`index.html` usa `lang="es"`). El títul
 ## Licencia y versión
 
 Proyecto **privado** (`private: true` en `package.json`). Versión actual del paquete: **0.1.0**.
+
+## HTTP y ambientes
+
+Configuración local/validación, contrato de errores, cancelación y pruebas: [docs/http-environments.md](docs/http-environments.md).

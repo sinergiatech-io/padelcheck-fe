@@ -7,6 +7,7 @@ import '@/styles/globals.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {
+    mutations: { retry: false },
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,

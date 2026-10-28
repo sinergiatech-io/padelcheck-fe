@@ -1,3 +1,4 @@
+import { resolveApiBase, isLocalEnvironment } from './api-config'
 export const APP_NAME = 'Padel Check'
 
 export const ROUTES = {
@@ -24,7 +25,8 @@ export const ROUTES = {
   settings: '/app/settings',
 } as const
 
-const viteApiBase = import.meta.env.VITE_API_BASE_URL
-
-export const API_BASE =
-  typeof viteApiBase === 'string' && viteApiBase.length > 0 ? viteApiBase : '/api'
+export const API_BASE = resolveApiBase(
+  import.meta.env.VITE_API_BASE_URL,
+  isLocalEnvironment(import.meta.env.VITE_APP_ENV, import.meta.env.DEV && import.meta.env.MODE === 'development'),
+  '/api',
+)

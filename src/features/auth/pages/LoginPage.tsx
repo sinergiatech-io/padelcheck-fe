@@ -5,14 +5,15 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import clubIcon from '@/assets/auth/club.svg?url'
 import eyeIcon from '@/assets/auth/eye.svg?url'
+import googleMark from '@/assets/auth/google-g.png'
 import personIcon from '@/assets/auth/person.svg?url'
 import { login as loginRequest } from '@/features/auth/api/login'
 import { acceptedReturnPath, resolveAccessDestination } from '@/features/auth/access-destination'
-import { AUTH_COPY, loginErrorMessage } from '@/features/auth/auth-copy'
+import { AUTH_COPY, loginErrorMessage, type LoginNotice } from '@/features/auth/auth-copy'
 import { AuthScreen } from '@/features/auth/components/AuthScreen'
+import { LoginBanner } from '@/features/auth/components/LoginBanner'
 import { useAuth } from '@/context/AuthContext'
 import { consumeLoginNotice } from '@/features/auth/login-notice'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
@@ -24,16 +25,18 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 const fieldClass =
-  'h-14 rounded-lg border-[#929195] px-4 text-sm font-medium text-[#120F18] placeholder:text-[#605E64] shadow-none'
+  'h-14 rounded-lg border-[#929195] px-4 text-sm font-medium text-[#120F18] placeholder:text-[#605E64] shadow-none focus-visible:ring-0'
+const fieldErrorClass = 'border-[#EF4444]'
+const messageClass = 'text-right text-sm font-medium leading-5 text-[#AA3030]'
 
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
-  const [formError, setFormError] = useState<string | null>(() =>
+  const [formError, setFormError] = useState<LoginNotice | null>(() =>
     consumeLoginNotice() === 'expired' || searchParams.get('notice') === 'expired'
-      ? AUTH_COPY.expired
+      ? { tone: 'warning', title: AUTH_COPY.expired }
       : null,
   )
   const [submitting, setSubmitting] = useState(false)
@@ -43,6 +46,10 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
+
+  const releaseBlocked = () => {
+    setFormError((current) => (current?.code === 'AUTH_ACCOUNT_BLOCKED' ? null : current))
+  }
 
   const onSubmit = async (values: LoginFormValues) => {
     if (submittingRef.current) return
@@ -63,15 +70,22 @@ export function LoginPage() {
     }
   }
 
+  const paleSubmit = submitting || formError?.code === 'AUTH_ACCOUNT_BLOCKED'
+
   return (
     <AuthScreen>
       <h1 className="text-2xl font-semibold leading-8 text-[#120F18]">Iniciar sesión</h1>
+      {formError ? (
+        <div className="mt-4">
+          <LoginBanner {...formError} />
+        </div>
+      ) : null}
       <Form {...form}>
         <form className="mt-4 flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
           <FormField
             control={form.control}
             name="email"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem className="space-y-2">
                 <FormLabel className="text-sm font-medium text-[#120F18]">Email</FormLabel>
                 <FormControl>
@@ -80,18 +94,22 @@ export function LoginPage() {
                     autoComplete="email"
                     inputMode="email"
                     placeholder="nombre@correo.com"
-                    className={fieldClass}
+                    className={`${fieldClass} ${fieldState.error ? fieldErrorClass : ''}`}
                     {...field}
+                    onChange={(event) => {
+                      releaseBlocked()
+                      field.onChange(event)
+                    }}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className={messageClass} />
               </FormItem>
             )}
           />
           <FormField
             control={form.control}
             name="password"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem className="space-y-2">
                 <FormLabel className="text-sm font-medium text-[#120F18]">Contraseña</FormLabel>
                 <FormControl>
@@ -100,8 +118,12 @@ export function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       placeholder="Ingresá tu contraseña"
-                      className={`${fieldClass} pr-12`}
+                      className={`${fieldClass} pr-12 ${fieldState.error ? fieldErrorClass : ''}`}
                       {...field}
+                      onChange={(event) => {
+                        releaseBlocked()
+                        field.onChange(event)
+                      }}
                     />
                     <button
                       type="button"
@@ -113,45 +135,63 @@ export function LoginPage() {
                     </button>
                   </div>
                 </FormControl>
-                <FormMessage />
+                <FormMessage className={messageClass} />
               </FormItem>
             )}
           />
-          {formError ? (
-            <p role="alert" className="text-sm font-medium text-error">
-              {formError}
-            </p>
-          ) : null}
-          <Button
+          <button
+            type="button"
+            disabled
+            className="flex h-11 w-full items-center justify-center text-sm font-medium leading-5 text-[#605E64] disabled:opacity-100"
+            aria-describedby="auth-unavailable"
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+          <button
             type="submit"
-            className="h-12 w-full rounded-lg text-sm font-medium"
-            disabled={submitting}
+            className={`flex h-12 w-full items-center justify-center rounded-lg text-sm font-medium leading-normal ${
+              paleSubmit ? 'bg-[#EEF0C1] text-[#605E64]' : 'bg-[#C9CF38] text-[#120F18]'
+            }`}
+            disabled={paleSubmit}
             aria-busy={submitting}
           >
-            {submitting ? 'Ingresando...' : 'Iniciar sesión'}
-          </Button>
+            {submitting ? 'Ingresando…' : 'Iniciar sesión'}
+          </button>
         </form>
       </Form>
-      <p className="mt-6 text-base leading-6 text-[#605E64]">¿No tenés cuenta? Registrate como</p>
-      <div className="mt-3 grid grid-cols-2 gap-3" aria-describedby="register-unavailable">
+      <div className="mt-4 flex h-6 items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-[#E7E7E8]" />
+        <span className="text-base font-normal leading-6 text-[#605E64]">o</span>
+        <span className="h-px flex-1 bg-[#E7E7E8]" />
+      </div>
+      <button
+        type="button"
+        className="mt-4 flex h-10 w-full items-center justify-center gap-2.5 rounded border border-[#747775] bg-white px-3"
+        style={{ fontFamily: '"Google Sans", Roboto, sans-serif' }}
+      >
+        <img src={googleMark} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+        <span className="text-sm font-medium leading-5 text-[#1F1F1F]">Continuar con Google</span>
+      </button>
+      <p className="mt-4 text-base leading-6 text-[#605E64]">¿No tenés cuenta? Registrate como</p>
+      <div className="mt-4 grid grid-cols-2 gap-3" aria-describedby="auth-unavailable">
         <button
           type="button"
           disabled
-          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#929195] text-sm font-medium text-[#120F18] opacity-60"
+          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#929195] text-sm font-medium text-[#120F18] disabled:opacity-100"
         >
-          <img src={personIcon} alt="" className="h-5 w-5" />
+          <img src={personIcon} alt="" width={20} height={20} className="h-5 w-5" />
           Jugador
         </button>
         <button
           type="button"
           disabled
-          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#929195] text-sm font-medium text-[#120F18] opacity-60"
+          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#929195] text-sm font-medium text-[#120F18] disabled:opacity-100"
         >
-          <img src={clubIcon} alt="" className="h-5 w-5" />
+          <img src={clubIcon} alt="" width={20} height={20.5} className="h-[20.5px] w-5" />
           Club
         </button>
       </div>
-      <p id="register-unavailable" className="mt-2 text-sm text-[#605E64]">
+      <p id="auth-unavailable" className="mt-4 text-sm text-[#605E64]">
         {AUTH_COPY.registerLater}
       </p>
     </AuthScreen>

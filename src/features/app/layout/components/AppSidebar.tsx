@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
 import { ROUTES } from '@/lib/constants'
 import { APP_NAME } from '@/lib/constants'
 import {
@@ -33,28 +34,38 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   )
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { destination } = useAuth()
+  const items = navItems.filter((item) =>
+    destination?.kind === 'club'
+      ? item.to === ROUTES.dashboard
+      : item.to === ROUTES.events || item.to === ROUTES.players,
+  )
+  const showSettings = destination?.kind === 'player'
+
   return (
     <>
       <div className="flex h-14 shrink-0 items-center border-b border-divider px-4">
         <span className="text-body font-semibold text-dark-900">{APP_NAME}</span>
       </div>
       <nav className="flex flex-1 flex-col space-y-0.5 overflow-y-auto p-2">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {items.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} className={navLinkClass} onClick={() => onNavigate?.()}>
             <Icon className="h-5 w-5 shrink-0" />
             {label}
           </NavLink>
         ))}
-        <div className="my-2 border-t border-divider pt-2">
-          <NavLink
-            to={ROUTES.settings}
-            className={navLinkClass}
-            onClick={() => onNavigate?.()}
-          >
-            <Settings className="h-5 w-5 shrink-0" />
-            Configuración
-          </NavLink>
-        </div>
+        {showSettings ? (
+          <div className="my-2 border-t border-divider pt-2">
+            <NavLink
+              to={ROUTES.settings}
+              className={navLinkClass}
+              onClick={() => onNavigate?.()}
+            >
+              <Settings className="h-5 w-5 shrink-0" />
+              Configuración
+            </NavLink>
+          </div>
+        ) : null}
       </nav>
     </>
   )

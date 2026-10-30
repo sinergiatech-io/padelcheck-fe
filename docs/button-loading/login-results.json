@@ -1,0 +1,140 @@
+[
+  {
+    "width": 360,
+    "before": {
+      "x": 16,
+      "y": 480,
+      "width": 328,
+      "height": 48
+    },
+    "during": {
+      "x": 16,
+      "y": 480,
+      "width": 328,
+      "height": 48
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Ingresando…",
+    "spinnerDisplay": "block",
+    "animation": "none",
+    "textVisibility": "hidden",
+    "requests": 1,
+    "errorRestoresButton": true
+  },
+  {
+    "width": 390,
+    "before": {
+      "x": 16,
+      "y": 480,
+      "width": 358,
+      "height": 48
+    },
+    "during": {
+      "x": 16,
+      "y": 480,
+      "width": 358,
+      "height": 48
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Ingresando…",
+    "spinnerDisplay": "block",
+    "animation": "none",
+    "textVisibility": "hidden",
+    "requests": 1,
+    "errorRestoresButton": true
+  },
+  {
+    "width": 402,
+    "before": {
+      "x": 16,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "during": {
+      "x": 16,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Ingresando…",
+    "spinnerDisplay": "block",
+    "animation": "none",
+    "textVisibility": "hidden",
+    "requests": 1,
+    "errorRestoresButton": true
+  },
+  {
+    "width": 767,
+    "before": {
+      "x": 198.5,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "during": {
+      "x": 198.5,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Ingresando…",
+    "spinnerDisplay": "block",
+    "animation": "none",
+    "textVisibility": "hidden",
+    "requests": 1,
+    "errorRestoresButton": true
+  },
+  {
+    "width": 768,
+    "before": {
+      "x": 199,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "during": {
+      "x": 199,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Ingresando…",
+    "spinnerDisplay": "none",
+    "animation": "none",
+    "textVisibility": "visible",
+    "requests": 1,
+    "errorRestoresButton": true
+  },
+  {
+    "width": 1024,
+    "before": {
+      "x": 327,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "during": {
+      "x": 327,
+      "y": 480,
+      "width": 370,
+      "height": 48
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Ingresando…",
+    "spinnerDisplay": "none",
+    "animation": "none",
+    "textVisibility": "visible",
+    "requests": 1,
+    "errorRestoresButton": true
+  }
+]

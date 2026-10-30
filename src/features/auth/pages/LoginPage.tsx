@@ -165,9 +165,9 @@ export function LoginPage() {
         </form>
       </Form>
       <div className="mt-4 flex h-6 items-center gap-3" aria-hidden="true">
-        <span className="h-px flex-1 bg-[#E7E7E8]" />
+        <span className="h-px flex-1 bg-[#B6B5B7]" />
         <span className="text-base font-normal leading-6 text-[#605E64]">o</span>
-        <span className="h-px flex-1 bg-[#E7E7E8]" />
+        <span className="h-px flex-1 bg-[#B6B5B7]" />
       </div>
       <button
         type="button"

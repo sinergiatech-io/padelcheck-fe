@@ -6,8 +6,11 @@ import AppLayout from '@/features/app/layout/AppLayout'
 import { LandingPage } from '@/features/public/landing/pages/LandingPage'
 import { PricingPage } from '@/features/public/pricing/pages/PricingPage'
 import { FaqPage } from '@/features/public/faq/pages/FaqPage'
+import { acceptedReturnPath } from '@/features/auth/access-destination'
+import { ContinuePage } from '@/features/auth/pages/ContinuePage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { SessionUnverifiedPage } from '@/features/auth/pages/SessionUnverifiedPage'
 import { MyTournamentsPage } from '@/features/app/my-tournaments/pages/MyTournamentsPage'
 import { DashboardPage } from '@/features/app/dashboard/pages/DashboardPage'
 import { DesignSystemPage } from '@/features/design-system/pages/DesignSystemPage'
@@ -24,8 +27,26 @@ import {
 import { EventCategoryEnrollPage } from '@/features/app/events/pages/EventCategoryEnrollPage'
 import { ProtectedRoute } from './ProtectedRoute'
 
+function ContinueRoute() {
+  const { phase, destination } = useAuth()
+  if (phase === 'checking') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#120F18]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#C9CF38] border-t-transparent" />
+      </div>
+    )
+  }
+  if (phase === 'unverified') return <SessionUnverifiedPage />
+  if (phase !== 'ready' || !destination) return <Navigate to={ROUTES.login} replace />
+  if (destination.kind !== 'continue') {
+    return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
+  }
+  return <ContinuePage />
+}
+
 function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, destination, phase } = useAuth()
+  if (phase === 'unverified') return <SessionUnverifiedPage />
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -33,7 +54,9 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
       </div>
     )
   }
-  if (isAuthenticated) return <Navigate to={ROUTES.dashboard} replace />
+  if (isAuthenticated && destination) {
+    return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
+  }
   return <>{children}</>
 }
 
@@ -41,19 +64,20 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route
+          path={ROUTES.login}
+          element={
+            <RedirectIfAuthenticated>
+              <LoginPage />
+            </RedirectIfAuthenticated>
+          }
+        />
+        <Route path={ROUTES.authContinue} element={<ContinueRoute />} />
         <Route element={<PublicLayout />}>
           <Route path={ROUTES.home} element={<LandingPage />} />
           <Route path={ROUTES.designSystem} element={<DesignSystemPage />} />
           <Route path={ROUTES.pricing} element={<PricingPage />} />
           <Route path={ROUTES.faq} element={<FaqPage />} />
-          <Route
-            path={ROUTES.login}
-            element={
-              <RedirectIfAuthenticated>
-                <LoginPage />
-              </RedirectIfAuthenticated>
-            }
-          />
           <Route
             path={ROUTES.register}
             element={

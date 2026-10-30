@@ -7,6 +7,7 @@ export const ROUTES = {
   pricing: '/pricing',
   faq: '/faq',
   login: '/login',
+  authContinue: '/auth/continue',
   register: '/register',
   app: '/app',
   dashboard: '/app',

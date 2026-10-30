@@ -6,6 +6,7 @@ import { ArrowBackIcon } from '@/components/icons/NavigationIcons'
 import { useAuth } from '@/context/AuthContext'
 import { EFFECTIVE_HELP, TYPE_HELP, example, optionLabel } from './category-policy'
 import { useCategoryPolicy } from './use-category-policy'
+import { ClubBottomNav } from './ClubBottomNav'
 import chevron from '@/assets/category-policy/chevron.svg'
 import checkIcon from '@/assets/category-policy/check.svg'
 import errorIcon from '@/assets/category-policy/error.svg'
@@ -79,10 +80,7 @@ export function CategoryPolicyPage() {
         {policy.loadError ? <Button className="mx-auto flex h-12 w-full max-w-xl rounded-lg" onClick={() => void policy.reload()}>Reintentar</Button> :
         <Button className={`mx-auto flex h-12 w-full max-w-xl rounded-lg text-sm transition-none hover:bg-primary-500 active:bg-primary-500 disabled:opacity-100 ${!policy.dirty && !policy.saving ? 'disabled:bg-[#eef0c1] disabled:text-[#605e64]' : ''}`} loading={policy.saving} loadingLabel="Guardando…" disabled={!policy.dirty} onClick={() => void policy.save()}>Guardar cambios</Button>}
       </footer>}
-      {/* KAN-134 owns the global club menu; this screen supplies its return contract. */}
-      <nav aria-label="Regreso al club" className="flex h-16 shrink-0 items-center justify-center bg-dark-900 text-primary-500">
-        <button type="button" onClick={back} disabled={policy.saving} className="h-full min-w-24 px-4 text-xs">Mi Club</button>
-      </nav>
+      <ClubBottomNav onDashboard={back} onClub={back} busy={policy.saving} />
       <dialog ref={dialog} aria-labelledby="discard-title" onCancel={event => { event.preventDefault(); if (blocker.state === 'blocked') blocker.reset() }} className="w-[calc(100%-2rem)] max-w-sm rounded-xl bg-surface p-6 text-dark-900 backdrop:bg-black/40">
         <h2 id="discard-title" className="text-lg font-semibold">¿Descartar los cambios?</h2>
         <p className="mt-2 text-sm">Tenés cambios sin guardar.</p>

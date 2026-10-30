@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { SearchFieldIcon } from '@/components/icons/SearchFieldIcon'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
 import { PlayerPersonIcon } from '@/components/icons/PlayerPersonIcon'
 import { cn } from '@/lib/utils'
 import { eventsMockService } from '../api/events.mock'
@@ -158,6 +159,7 @@ export function EnrollmentModal({ eventId, categoryId, onSuccess }: EnrollmentMo
   const { isOpen, mode, registration, close } = useEnrollmentModal()
   const [currentPlayer, setCurrentPlayer] = useState<EnrollablePlayer | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -179,7 +181,8 @@ export function EnrollmentModal({ eventId, categoryId, onSuccess }: EnrollmentMo
   const isConfirmEnabled = canConfirm && !submitting
 
   const onConfirm = async () => {
-    if (!player1 || !player2 || submitting) return
+    if (!player1 || !player2 || submittingRef.current) return
+    submittingRef.current = true
     setSubmitting(true)
     try {
       if (mode === 'create') {
@@ -190,6 +193,7 @@ export function EnrollmentModal({ eventId, categoryId, onSuccess }: EnrollmentMo
       close()
       onSuccess()
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
@@ -251,6 +255,8 @@ export function EnrollmentModal({ eventId, categoryId, onSuccess }: EnrollmentMo
             <button
               type="button"
               disabled={!isConfirmEnabled}
+              aria-busy={submitting}
+              aria-label={submitting ? 'Confirmando inscripción…' : undefined}
               onClick={() => void onConfirm()}
               className={cn(
                 'flex h-10 flex-1 items-center justify-center rounded-lg text-body-sm font-medium',
@@ -259,7 +265,7 @@ export function EnrollmentModal({ eventId, categoryId, onSuccess }: EnrollmentMo
                   : 'bg-[#eef0c1] text-[#605e64] opacity-50',
               )}
             >
-              Confirmar
+              <ButtonLoadingContent loading={submitting}>Confirmar</ButtonLoadingContent>
             </button>
           </div>
         </div>

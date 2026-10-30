@@ -160,7 +160,7 @@ export function DesignSystemPage() {
                   <Users className="h-4 w-4" />
                   Nuevo Jugador
                 </Button>
-                <Button disabled>Procesando...</Button>
+                <Button disabled loading loadingLabel="Procesando…">Procesando...</Button>
               </div>
             </div>
             <div>

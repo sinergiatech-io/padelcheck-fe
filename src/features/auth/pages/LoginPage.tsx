@@ -17,6 +17,7 @@ import { LoginBanner } from '@/features/auth/components/LoginBanner'
 import { useAuth } from '@/context/AuthContext'
 import { consumeLoginNotice } from '@/features/auth/login-notice'
 import { Input } from '@/components/ui/input'
+import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
 const loginSchema = z.object({
@@ -159,8 +160,11 @@ export function LoginPage() {
             }`}
             disabled={paleSubmit}
             aria-busy={submitting}
+            aria-label={submitting ? 'Ingresando…' : undefined}
           >
-            {submitting ? 'Ingresando…' : 'Iniciar sesión'}
+            <ButtonLoadingContent loading={submitting}>
+              {submitting ? 'Ingresando…' : 'Iniciar sesión'}
+            </ButtonLoadingContent>
           </button>
         </form>
       </Form>

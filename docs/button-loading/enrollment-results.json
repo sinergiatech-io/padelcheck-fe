@@ -1,0 +1,94 @@
+[
+  {
+    "width": 402,
+    "mode": "create",
+    "before": {
+      "x": 207,
+      "y": 575.5,
+      "width": 155,
+      "height": 40
+    },
+    "during": {
+      "x": 207,
+      "y": 575.5,
+      "width": 155,
+      "height": 40
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Confirmando inscripción…",
+    "spinner": "block",
+    "text": "hidden",
+    "successCloses": true,
+    "duplicateBlocked": true
+  },
+  {
+    "width": 402,
+    "mode": "edit",
+    "before": {
+      "x": 207,
+      "y": 575.5,
+      "width": 155,
+      "height": 40
+    },
+    "during": {
+      "x": 207,
+      "y": 575.5,
+      "width": 155,
+      "height": 40
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Confirmando inscripción…",
+    "spinner": "block",
+    "text": "hidden",
+    "successCloses": true,
+    "duplicateBlocked": true
+  },
+  {
+    "width": 1024,
+    "mode": "create",
+    "before": {
+      "x": 518,
+      "y": 575.5,
+      "width": 157.5,
+      "height": 40
+    },
+    "during": {
+      "x": 518,
+      "y": 575.5,
+      "width": 157.5,
+      "height": 40
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Confirmando inscripción…",
+    "spinner": "none",
+    "text": "visible",
+    "successCloses": true,
+    "duplicateBlocked": true
+  },
+  {
+    "width": 1024,
+    "mode": "edit",
+    "before": {
+      "x": 518,
+      "y": 575.5,
+      "width": 157.5,
+      "height": 40
+    },
+    "during": {
+      "x": 518,
+      "y": 575.5,
+      "width": 157.5,
+      "height": 40
+    },
+    "disabled": true,
+    "busy": "true",
+    "label": "Confirmando inscripción…",
+    "spinner": "none",
+    "text": "visible",
+    "successCloses": true,
+    "duplicateBlocked": true
+  }
+]

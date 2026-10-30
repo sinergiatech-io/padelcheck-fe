@@ -12,7 +12,7 @@ const tones = {
 export function LoginBanner({ tone, title, detail }: LoginNotice) {
   const style = tones[tone]
   return (
-    <div role="alert" className={`flex items-center gap-3 rounded-lg border p-3 ${style.box}`}>
+    <div role="alert" className={`flex items-center gap-3 rounded-md border p-3 ${style.box}`}>
       <span className="relative h-6 w-6 shrink-0">
         <img src={style.icon} alt="" width={20} height={20} className="absolute left-0.5 top-0.5 h-5 w-5" />
       </span>

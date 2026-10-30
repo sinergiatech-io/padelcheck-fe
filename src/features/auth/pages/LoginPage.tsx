@@ -4,7 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import clubIcon from '@/assets/auth/club.svg?url'
-import eyeIcon from '@/assets/auth/eye.svg?url'
+import eyeOffIcon from '@/assets/auth/eye.svg?url'
+import eyeOnIcon from '@/assets/auth/eye-on.svg?url'
+import googleLabel from '@/assets/auth/google-label.svg?url'
 import googleMark from '@/assets/auth/google-g.png'
 import personIcon from '@/assets/auth/person.svg?url'
 import { login as loginRequest } from '@/features/auth/api/login'
@@ -25,7 +27,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 const fieldClass =
-  'h-14 rounded-lg border-[#929195] px-4 text-sm font-medium text-[#120F18] placeholder:text-[#605E64] shadow-none focus-visible:ring-0'
+  'h-14 rounded-md border-[#929195] bg-[#FEFEFE] px-4 text-sm font-medium leading-5 text-[#120F18] placeholder:text-[#605E64] shadow-none focus-visible:ring-0'
 const fieldErrorClass = 'border-[#EF4444]'
 const messageClass = 'text-right text-sm font-medium leading-5 text-[#AA3030]'
 
@@ -86,23 +88,25 @@ export function LoginPage() {
             control={form.control}
             name="email"
             render={({ field, fieldState }) => (
-              <FormItem className="space-y-2">
-                <FormLabel className="text-sm font-medium text-[#120F18]">Email</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    autoComplete="email"
-                    inputMode="email"
-                    placeholder="nombre@correo.com"
-                    className={`${fieldClass} ${fieldState.error ? fieldErrorClass : ''}`}
-                    {...field}
-                    onChange={(event) => {
-                      releaseBlocked()
-                      field.onChange(event)
-                    }}
-                  />
-                </FormControl>
-                <FormMessage className={messageClass} />
+              <FormItem className="flex flex-col gap-2 space-y-0">
+                <FormLabel className="text-sm font-medium leading-5 text-[#120F18]">Email</FormLabel>
+                <div className="w-full">
+                  <FormControl>
+                    <Input
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      placeholder="nombre@correo.com"
+                      className={`${fieldClass} ${fieldState.error ? fieldErrorClass : ''}`}
+                      {...field}
+                      onChange={(event) => {
+                        releaseBlocked()
+                        field.onChange(event)
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage className={messageClass} />
+                </div>
               </FormItem>
             )}
           />
@@ -110,10 +114,11 @@ export function LoginPage() {
             control={form.control}
             name="password"
             render={({ field, fieldState }) => (
-              <FormItem className="space-y-2">
-                <FormLabel className="text-sm font-medium text-[#120F18]">Contraseña</FormLabel>
+              <FormItem className="flex flex-col gap-2 space-y-0">
+                <FormLabel className="text-sm font-medium leading-5 text-[#120F18]">Contraseña</FormLabel>
+                <div className="w-full">
                 <FormControl>
-                  <div className="relative">
+                  <div className="relative w-full">
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
@@ -131,25 +136,25 @@ export function LoginPage() {
                       aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                       onClick={() => setShowPassword((value) => !value)}
                     >
-                      <img src={eyeIcon} alt="" className="h-6 w-6" />
+                      <img src={showPassword ? eyeOnIcon : eyeOffIcon} alt="" className="h-6 w-6" />
                     </button>
                   </div>
                 </FormControl>
                 <FormMessage className={messageClass} />
+                </div>
               </FormItem>
             )}
           />
           <button
             type="button"
             disabled
-            className="flex h-11 w-full items-center justify-center text-sm font-medium leading-5 text-[#605E64] disabled:opacity-100"
-            aria-describedby="auth-unavailable"
+            className="flex h-11 w-full items-center justify-center text-sm font-medium leading-5 text-[#120F18] disabled:opacity-100"
           >
             ¿Olvidaste tu contraseña?
           </button>
           <button
             type="submit"
-            className={`flex h-12 w-full items-center justify-center rounded-lg text-sm font-medium leading-normal ${
+            className={`flex h-12 w-full items-center justify-center rounded-md text-sm font-medium leading-normal ${
               paleSubmit ? 'bg-[#EEF0C1] text-[#605E64]' : 'bg-[#C9CF38] text-[#120F18]'
             }`}
             disabled={paleSubmit}
@@ -166,18 +171,18 @@ export function LoginPage() {
       </div>
       <button
         type="button"
-        className="mt-4 flex h-10 w-full items-center justify-center gap-2.5 rounded border border-[#747775] bg-white px-3"
-        style={{ fontFamily: '"Google Sans", Roboto, sans-serif' }}
+        aria-label="Continuar con Google"
+        className="mt-4 flex h-12 w-full items-center justify-center gap-2.5 rounded-md border border-[#747775] bg-white px-3"
       >
         <img src={googleMark} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
-        <span className="text-sm font-medium leading-5 text-[#1F1F1F]">Continuar con Google</span>
+        <img src={googleLabel} alt="" width={142.674} height={13.496} />
       </button>
       <p className="mt-4 text-base leading-6 text-[#605E64]">¿No tenés cuenta? Registrate como</p>
-      <div className="mt-4 grid grid-cols-2 gap-3" aria-describedby="auth-unavailable">
+      <div className="mt-4 grid grid-cols-2 gap-3">
         <button
           type="button"
           disabled
-          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#929195] text-sm font-medium text-[#120F18] disabled:opacity-100"
+          className="flex h-12 items-center justify-center gap-2 rounded-md border border-[#929195] pl-2 pr-4 text-sm font-medium leading-normal text-[#120F18] disabled:opacity-100"
         >
           <img src={personIcon} alt="" width={20} height={20} className="h-5 w-5" />
           Jugador
@@ -185,15 +190,12 @@ export function LoginPage() {
         <button
           type="button"
           disabled
-          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#929195] text-sm font-medium text-[#120F18] disabled:opacity-100"
+          className="flex h-12 items-center justify-center gap-2 rounded-md border border-[#929195] pl-2 pr-4 text-sm font-medium leading-normal text-[#120F18] disabled:opacity-100"
         >
           <img src={clubIcon} alt="" width={20} height={20.5} className="h-[20.5px] w-5" />
           Club
         </button>
       </div>
-      <p id="auth-unavailable" className="mt-4 text-sm text-[#605E64]">
-        {AUTH_COPY.registerLater}
-      </p>
     </AuthScreen>
   )
 }

@@ -1,0 +1,77 @@
+{
+  "realApi": true,
+  "saveReadback": true,
+  "draftPreserved": true,
+  "discardAndBrowserBack": true,
+  "loadRetry": true,
+  "emptyCatalogRetry": true,
+  "errors": [],
+  "results": [
+    {
+      "width": 360,
+      "stableDimensions": true,
+      "singleWrite": true,
+      "busy": "true",
+      "background": "rgb(201, 207, 56)",
+      "opacity": "1",
+      "text": "hidden",
+      "spinner": "block",
+      "animation": "none"
+    },
+    {
+      "width": 390,
+      "stableDimensions": true,
+      "singleWrite": true,
+      "busy": "true",
+      "background": "rgb(201, 207, 56)",
+      "opacity": "1",
+      "text": "hidden",
+      "spinner": "block",
+      "animation": "none"
+    },
+    {
+      "width": 402,
+      "stableDimensions": true,
+      "singleWrite": true,
+      "busy": "true",
+      "background": "rgb(201, 207, 56)",
+      "opacity": "1",
+      "text": "hidden",
+      "spinner": "block",
+      "animation": "none"
+    },
+    {
+      "width": 767,
+      "stableDimensions": true,
+      "singleWrite": true,
+      "busy": "true",
+      "background": "rgb(201, 207, 56)",
+      "opacity": "1",
+      "text": "hidden",
+      "spinner": "block",
+      "animation": "none"
+    },
+    {
+      "width": 768,
+      "stableDimensions": true,
+      "singleWrite": true,
+      "busy": "true",
+      "background": "rgb(201, 207, 56)",
+      "opacity": "1",
+      "text": "visible",
+      "spinner": "none",
+      "animation": "none"
+    },
+    {
+      "width": 1024,
+      "stableDimensions": true,
+      "singleWrite": true,
+      "busy": "true",
+      "background": "rgb(201, 207, 56)",
+      "opacity": "1",
+      "text": "visible",
+      "spinner": "none",
+      "animation": "none"
+    }
+  ]
+}

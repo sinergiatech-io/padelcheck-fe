@@ -11,6 +11,7 @@ import {
 import { fetchCurrentUser } from '@/features/auth/api/me'
 import { resolveAccessDestination, type AccessDestination } from '@/features/auth/access-destination'
 import { rememberExpiredLoginNotice } from '@/features/auth/login-notice'
+import { decideSessionCheck } from '@/features/auth/session-check'
 import { bumpSessionGeneration, currentSessionGeneration } from '@/features/auth/session-generation'
 import { ApiError } from '@/lib/api-client'
 import { clearStoredToken, getStoredToken, setStoredToken } from '@/lib/auth'
@@ -86,30 +87,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ phase: 'anonymous', user: null, token: null, expiresAt: null })
   }, [])
 
-  const applyUser = useCallback((user: AuthPrincipal, token: string, expiresAt: number | null, generation: number) => {
-    if (generation !== currentSessionGeneration()) return
-    setState({ phase: 'ready', user, token, expiresAt })
-  }, [])
-
-  const validate = useCallback(async (generation: number, token: string, expiresAt: number | null) => {
+  const validate = useCallback(async (token: string, expiresAt: number | null) => {
+    const generation = bumpSessionGeneration()
     if (expiresAt !== null && Date.now() >= expiresAt) {
-      if (generation !== currentSessionGeneration()) return
+      if (decideSessionCheck({ attempt: generation, current: currentSessionGeneration(), error: null }) !== 'ready') return
       logout('expired')
       return
     }
     try {
       const user = await fetchCurrentUser()
+      if (decideSessionCheck({ attempt: generation, current: currentSessionGeneration(), error: null }) !== 'ready') return
       localStorage.setItem(USER_KEY, JSON.stringify(user))
-      applyUser(user, token, expiresAt, generation)
+      if (decideSessionCheck({ attempt: generation, current: currentSessionGeneration(), error: null }) !== 'ready') return
+      setState({ phase: 'ready', user, token, expiresAt })
     } catch (error) {
-      if (generation !== currentSessionGeneration()) return
-      if (error instanceof ApiError && error.status === 401) {
+      const decision = decideSessionCheck({
+        attempt: generation,
+        current: currentSessionGeneration(),
+        error: error instanceof ApiError ? error : { status: 0 },
+      })
+      if (decision === 'ignore') return
+      if (decision === 'expired') {
         logout('expired')
         return
       }
       setState({ phase: 'unverified', user: null, token, expiresAt })
     }
-  }, [applyUser, logout])
+  }, [logout])
 
   const login = useCallback((token: string, user: AuthPrincipal, expiresIn: number) => {
     const generation = bumpSessionGeneration()
@@ -132,9 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout()
       return
     }
-    const generation = currentSessionGeneration()
     setState((current) => ({ ...current, phase: 'checking' }))
-    void validate(generation, token, readExpires())
+    void validate(token, readExpires())
   }, [logout, validate])
 
   useEffect(() => {
@@ -145,8 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({ phase: 'anonymous', user: null, token: null, expiresAt: null })
       return
     }
-    const generation = currentSessionGeneration()
-    void validate(generation, token, readExpires())
+    void validate(token, readExpires())
   }, [validate])
 
   useEffect(() => {
@@ -154,9 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState !== 'visible') return
       const current = stateRef.current
       if (current.phase !== 'ready' || !current.token) return
-      const generation = currentSessionGeneration()
       setState((value) => ({ ...value, phase: 'checking' }))
-      void validate(generation, current.token, current.expiresAt)
+      void validate(current.token, current.expiresAt)
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
@@ -185,9 +186,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (error.status === 403 && error.code === 'AUTH_FORBIDDEN' && !path.includes('/auth/me')) {
         if (stateRef.current.phase !== 'ready' || !stateRef.current.token) return
-        const generation = currentSessionGeneration()
         setState((value) => ({ ...value, phase: 'checking' }))
-        void validate(generation, stateRef.current.token as string, stateRef.current.expiresAt)
+        void validate(stateRef.current.token as string, stateRef.current.expiresAt)
       }
     })
     return () => setHttpErrorListener(null)

@@ -1,4 +1,5 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider } from 'react-router-dom'
+import { CategoryPolicyPage } from '@/features/club/category-policy/CategoryPolicyPage'
 import { useAuth } from '@/context/AuthContext'
 import { ROUTES } from '@/lib/constants'
 import PublicLayout from '@/features/public/shared/layouts/PublicLayout'
@@ -60,10 +61,9 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-export function AppRouter() {
-  return (
-    <BrowserRouter>
-      <Routes>
+const router = createBrowserRouter(createRoutesFromElements(
+      <>
+        <Route path="/club/settings/categories" element={<ProtectedRoute><CategoryPolicyPage /></ProtectedRoute>} />
         <Route
           path={ROUTES.login}
           element={
@@ -120,7 +120,9 @@ export function AppRouter() {
         </Route>
 
         <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
-      </Routes>
-    </BrowserRouter>
-  )
+      </>
+))
+
+export function AppRouter() {
+  return <RouterProvider router={router} />
 }

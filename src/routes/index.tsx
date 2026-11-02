@@ -11,6 +11,7 @@ import { acceptedReturnPath } from '@/features/auth/access-destination'
 import { ContinuePage } from '@/features/auth/pages/ContinuePage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { PlayerRegisterPage } from '@/features/auth/pages/PlayerRegisterPage'
 import { SessionUnverifiedPage } from '@/features/auth/pages/SessionUnverifiedPage'
 import { MyTournamentsPage } from '@/features/app/my-tournaments/pages/MyTournamentsPage'
 import { DashboardPage } from '@/features/app/dashboard/pages/DashboardPage'
@@ -74,6 +75,8 @@ const router = createBrowserRouter(createRoutesFromElements(
           }
         />
         <Route path={ROUTES.authContinue} element={<ContinueRoute />} />
+        <Route path="/register/player" element={<RedirectIfAuthenticated><PlayerRegisterPage /></RedirectIfAuthenticated>} />
+        <Route path="/register/player/verify" element={<StartupReady><PlayerRegisterPage /></StartupReady>} />
         <Route element={<PublicLayout />}>
           <Route path={ROUTES.home} element={<StartupReady><LandingPage /></StartupReady>} />
           <Route path={ROUTES.designSystem} element={<StartupReady><DesignSystemPage /></StartupReady>} />

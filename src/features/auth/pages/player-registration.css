@@ -1,0 +1,6 @@
+/* Use the same Inter assets as native without relying on a third-party font request. */
+@font-face { font-family: RegistrationInter; src: url('../../../assets/auth/fonts/Inter400.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: RegistrationInter; src: url('../../../assets/auth/fonts/Inter500.ttf') format('truetype'); font-style: normal; font-weight: 500; font-display: swap; }
+@font-face { font-family: RegistrationInter; src: url('../../../assets/auth/fonts/Inter600.ttf') format('truetype'); font-style: normal; font-weight: 600; font-display: swap; }
+@font-face { font-family: RegistrationInter; src: url('../../../assets/auth/fonts/Inter700.ttf') format('truetype'); font-style: normal; font-weight: 700; font-display: swap; }
+.player-registration { font-family: RegistrationInter, Inter, system-ui, sans-serif; }

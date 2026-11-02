@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "checks": [
+    "login entry",
+    "mandatory sex",
+    "real API/SMTP start",
+    "resend invalidates prior link",
+    "email proof",
+    "atomic activation",
+    "real login",
+    "no password persistence",
+    "catalog recovery",
+    "360/390/402/767/768/1024 widths"
+  ],
+  "smtp": "local receiver; external mailbox validation separate"
+}

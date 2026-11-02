@@ -185,7 +185,7 @@ export function LoginPage() {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <button
           type="button"
-          disabled
+          onClick={() => navigate(`/register/player${searchParams.get('returnUrl') ? `?returnUrl=${encodeURIComponent(searchParams.get('returnUrl')!)}` : ''}`)}
           className="flex h-12 items-center justify-center gap-2 rounded-md border border-[#929195] pl-2 pr-4 text-sm font-medium leading-normal text-[#120F18] disabled:opacity-100"
         >
           <img src={personIcon} alt="" width={20} height={20} className="h-5 w-5" />

@@ -1,0 +1,76 @@
+{
+  "browser": "156.0.8078.48",
+  "scenario": "Anonymous /login, fresh context, 402x789, bundle delayed 500ms, fonts stubbed equally, five alternating runs. Local lab measurement, not a production benchmark.",
+  "samples": [
+    {
+      "version": "before",
+      "run": 1,
+      "usableMs": 577.5,
+      "firstContentfulPaintMs": null
+    },
+    {
+      "version": "after",
+      "run": 1,
+      "usableMs": 578.5,
+      "firstContentfulPaintMs": 32
+    },
+    {
+      "version": "before",
+      "run": 2,
+      "usableMs": 560.8999999761581,
+      "firstContentfulPaintMs": 580
+    },
+    {
+      "version": "after",
+      "run": 2,
+      "usableMs": 560.5,
+      "firstContentfulPaintMs": 32
+    },
+    {
+      "version": "before",
+      "run": 3,
+      "usableMs": 563.8999999761581,
+      "firstContentfulPaintMs": 584
+    },
+    {
+      "version": "after",
+      "run": 3,
+      "usableMs": 561.3999999761581,
+      "firstContentfulPaintMs": 28
+    },
+    {
+      "version": "before",
+      "run": 4,
+      "usableMs": 560.8999999761581,
+      "firstContentfulPaintMs": 584
+    },
+    {
+      "version": "after",
+      "run": 4,
+      "usableMs": 571.7999999523163,
+      "firstContentfulPaintMs": 32
+    },
+    {
+      "version": "before",
+      "run": 5,
+      "usableMs": 565.5999999046326,
+      "firstContentfulPaintMs": 588
+    },
+    {
+      "version": "after",
+      "run": 5,
+      "usableMs": 565.7999999523163,
+      "firstContentfulPaintMs": 28
+    }
+  ],
+  "summary": {
+    "before": {
+      "usableMedianMs": 563.8999999761581,
+      "firstContentfulPaintMedianMs": 584
+    },
+    "after": {
+      "usableMedianMs": 565.7999999523163,
+      "firstContentfulPaintMedianMs": 32
+    }
+  }
+}

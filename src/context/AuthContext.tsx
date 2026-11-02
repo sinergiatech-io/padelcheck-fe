@@ -30,7 +30,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (token: string, user: AuthPrincipal, expiresIn: number) => boolean
-  logout: (notice?: 'expired') => void
+  logout: (notice?: 'expired') => boolean
   retryValidation: () => void
   isAuthenticated: boolean
   isLoading: boolean
@@ -41,15 +41,6 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 const USER_KEY = 'padelcheck_user'
 const EXPIRES_KEY = 'padelcheck_session_expires_at'
-function readUser(): AuthPrincipal | null {
-  try {
-    const raw = localStorage.getItem(USER_KEY)
-    return raw ? (JSON.parse(raw) as AuthPrincipal) : null
-  } catch {
-    return null
-  }
-}
-
 function readExpires(): number | null {
   const raw = localStorage.getItem(EXPIRES_KEY)
   if (!raw) return null
@@ -58,10 +49,10 @@ function readExpires(): number | null {
 }
 
 function clearPrivateSession() {
+  queryClient.clear()
   clearStoredToken()
   localStorage.removeItem(USER_KEY)
   localStorage.removeItem(EXPIRES_KEY)
-  queryClient.clear()
 }
 
 function errorPath(error: ApiError): string {
@@ -82,9 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback((notice?: 'expired') => {
     bumpSessionGeneration()
-    clearPrivateSession()
-    if (notice === 'expired') rememberExpiredLoginNotice()
+    try {
+      clearPrivateSession()
+      if (notice === 'expired') rememberExpiredLoginNotice()
+    } catch {
+      setState({ phase: 'unverified', user: null, token: null, expiresAt: null })
+      return false
+    }
     setState({ phase: 'anonymous', user: null, token: null, expiresAt: null })
+    return true
   }, [])
 
   const validate = useCallback(async (token: string, expiresAt: number | null) => {
@@ -131,25 +128,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const retryValidation = useCallback(() => {
-    const token = getStoredToken()
-    if (!token) {
-      logout()
-      return
+    try {
+      const token = getStoredToken()
+      if (!token) {
+        logout()
+        return
+      }
+      const expiresAt = readExpires()
+      setState((current) => ({ ...current, phase: 'checking' }))
+      void validate(token, expiresAt)
+    } catch {
+      // Failure to read storage is not proof that credentials are absent/expired.
+      bumpSessionGeneration()
+      setState({ phase: 'unverified', user: null, token: null, expiresAt: null })
     }
-    setState((current) => ({ ...current, phase: 'checking' }))
-    void validate(token, readExpires())
   }, [logout, validate])
 
   useEffect(() => {
-    const token = getStoredToken()
-    const storedUser = readUser()
-    if (!token || !storedUser) {
-      clearPrivateSession()
-      setState({ phase: 'anonymous', user: null, token: null, expiresAt: null })
-      return
-    }
-    void validate(token, readExpires())
-  }, [validate])
+    // /me is authoritative; a missing/corrupt cached principal need not discard a token.
+    retryValidation()
+  }, [retryValidation])
 
   useEffect(() => {
     const onVisible = () => {

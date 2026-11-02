@@ -1,0 +1,7 @@
+- region "No pudimos iniciar Padel Check":
+  - img "Padel Check"
+  - heading "No pudimos iniciar Padel Check" [level=1]
+  - status:
+    - strong: El inicio se interrumpió
+    - paragraph: Volvé a intentarlo para continuar.
+  - button "Reintentar"

@@ -32,3 +32,9 @@ are not proven by web evidence. Google Workspace accepted a real send and resend
 to the user-authorized personal test mailbox. On 02/11/2026 the recipient confirmed
 both messages arrived in the inbox. SMTP credentials remain only in local/runtime
 configuration.
+
+The recipient also opened the real mailbox link and confirmed the screen shows
+**Email verificado** and the separate **Completar registro** action. This confirms real-email link verification, not
+account activation or native standalone handling. This particular SMTP test
+draft used a discarded random password; a usable personal account should start
+a fresh registration with a password chosen by its owner.

@@ -29,5 +29,6 @@ Refresh warnings. No unrelated source fix was included.
 
 Remaining acceptance: iOS runtime and standalone native verification-link opening
 are not proven by web evidence. Google Workspace accepted a real send and resend
-to the user-authorized personal test mailbox; inbox reception requires recipient
-confirmation. SMTP credentials remain only in local/runtime configuration.
+to the user-authorized personal test mailbox. On 02/11/2026 the recipient confirmed
+both messages arrived in the inbox. SMTP credentials remain only in local/runtime
+configuration.

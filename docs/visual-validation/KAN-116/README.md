@@ -43,3 +43,11 @@ is published. This SMTP test account used a discarded random password. Since it
 is now active, a new registration with the same email will conflict; manual login
 with this particular account remains unverified. The earlier automated real-login
 checks used separate synthetic accounts with known test passwords.
+
+After catchAll was enabled locally, the user confirmed a separate complete
+manual web journey using a new arbitrary account email and a personally chosen
+password: registration, delivery to the configured test inbox, email verification,
+activation, login with the arbitrary account email/password, and arrival at
+**Eventos** in the player portal. This validates the manual login and catchAll
+flow for that new account; it does not change the iOS/standalone-native pending
+checks. No user screenshot, email identity or password is published here.

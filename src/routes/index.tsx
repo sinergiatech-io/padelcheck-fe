@@ -27,6 +27,7 @@ import {
 } from '@/features/app/events/pages/EventCategoryTabPage'
 import { EventCategoryEnrollPage } from '@/features/app/events/pages/EventCategoryEnrollPage'
 import { ProtectedRoute } from './ProtectedRoute'
+import { StartupReady, StartupRouteError } from '@/features/startup/StartupReady'
 
 function ContinueRoute() {
   const { phase, destination } = useAuth()
@@ -42,7 +43,7 @@ function ContinueRoute() {
   if (destination.kind !== 'continue') {
     return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
   }
-  return <ContinuePage />
+  return <StartupReady><ContinuePage /></StartupReady>
 }
 
 function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
@@ -58,12 +59,12 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
   if (isAuthenticated && destination) {
     return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
   }
-  return <>{children}</>
+  return <StartupReady>{children}</StartupReady>
 }
 
 const router = createBrowserRouter(createRoutesFromElements(
-      <>
-        <Route path="/club/settings/categories" element={<ProtectedRoute><CategoryPolicyPage /></ProtectedRoute>} />
+      <Route errorElement={<StartupRouteError />}>
+        <Route path="/club/settings/categories" element={<ProtectedRoute><StartupReady><CategoryPolicyPage /></StartupReady></ProtectedRoute>} />
         <Route
           path={ROUTES.login}
           element={
@@ -74,10 +75,10 @@ const router = createBrowserRouter(createRoutesFromElements(
         />
         <Route path={ROUTES.authContinue} element={<ContinueRoute />} />
         <Route element={<PublicLayout />}>
-          <Route path={ROUTES.home} element={<LandingPage />} />
-          <Route path={ROUTES.designSystem} element={<DesignSystemPage />} />
-          <Route path={ROUTES.pricing} element={<PricingPage />} />
-          <Route path={ROUTES.faq} element={<FaqPage />} />
+          <Route path={ROUTES.home} element={<StartupReady><LandingPage /></StartupReady>} />
+          <Route path={ROUTES.designSystem} element={<StartupReady><DesignSystemPage /></StartupReady>} />
+          <Route path={ROUTES.pricing} element={<StartupReady><PricingPage /></StartupReady>} />
+          <Route path={ROUTES.faq} element={<StartupReady><FaqPage /></StartupReady>} />
           <Route
             path={ROUTES.register}
             element={
@@ -96,11 +97,11 @@ const router = createBrowserRouter(createRoutesFromElements(
             </ProtectedRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
-          <Route path="events" element={<EventsListPage />} />
-          <Route path="events/location" element={<EventsLocationPage />} />
-          <Route path="events/:eventId" element={<EventDetailPage />} />
-          <Route path="events/:eventId/categories/:categoryId/enroll" element={<EventCategoryEnrollPage />} />
+          <Route index element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="events" element={<StartupReady><EventsListPage /></StartupReady>} />
+          <Route path="events/location" element={<StartupReady><EventsLocationPage /></StartupReady>} />
+          <Route path="events/:eventId" element={<StartupReady><EventDetailPage /></StartupReady>} />
+          <Route path="events/:eventId/categories/:categoryId/enroll" element={<StartupReady><EventCategoryEnrollPage /></StartupReady>} />
           <Route path="events/:eventId/categories/:categoryId" element={<EventCategoryLayout />}>
             <Route index element={<EventCategoryDefaultRedirect />} />
             <Route path=":tab" element={<EventCategoryTabPage />} />
@@ -109,18 +110,18 @@ const router = createBrowserRouter(createRoutesFromElements(
           <Route path="events/:eventId/qualifier" element={<LegacyEventTabRedirect tab="clasificatoria" />} />
           <Route path="events/:eventId/brackets" element={<LegacyEventTabRedirect tab="cuadros" />} />
           <Route path="events/:eventId/enroll" element={<LegacyEventEnrollRedirect />} />
-          <Route path="tournaments" element={<DashboardPage />} />
-          <Route path="categories" element={<DashboardPage />} />
-          <Route path="players" element={<DashboardPage />} />
-          <Route path="pairs" element={<DashboardPage />} />
-          <Route path="courts" element={<DashboardPage />} />
-          <Route path="matches" element={<DashboardPage />} />
-          <Route path="settings" element={<DashboardPage />} />
-          <Route path="my-tournaments" element={<MyTournamentsPage />} />
+          <Route path="tournaments" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="categories" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="players" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="pairs" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="courts" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="matches" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="settings" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="my-tournaments" element={<StartupReady><MyTournamentsPage /></StartupReady>} />
         </Route>
 
         <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
-      </>
+      </Route>
 ))
 
 export function AppRouter() {

@@ -3,17 +3,204 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#120F18" />
+    <!-- Critical launch UI stays inline: it must survive a missing application bundle. -->
+    <style>
+      #pc-startup, .pc-nojs { position:fixed; inset:0; z-index:10000; background:#120f18; color:#120f18; font-family:Inter,system-ui,sans-serif; }
+      #pc-startup[hidden], #pc-startup [hidden] { display:none !important; }
+      #pc-startup *, .pc-nojs * { box-sizing:border-box; }
+      .pc-brand { height:100%; display:flex; align-items:center; justify-content:center; padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px); }
+      .pc-logo { position:relative; width:141px; height:139px; }
+      .pc-logo img { width:141px; height:139px; object-fit:contain; }
+      .pc-logo::after { content:""; position:absolute; inset:0; background:linear-gradient(45deg,transparent 42%,#fff8 50%,transparent 58%); background-size:350% 350%; animation:pc-shine 700ms linear both; mask:url('/startup/logo.png') center/contain no-repeat; -webkit-mask:url('/startup/logo.png') center/contain no-repeat; }
+      @keyframes pc-shine { from { background-position:100% 0; } to { background-position:0 100%; } }
+      .pc-logo.pc-degraded::after { display:none; }
+      .pc-logo-text { color:#c9cf38; font-size:24px; font-weight:600; text-align:center; }
+      .pc-recovery, .pc-nojs { overflow:auto; }
+      .pc-shell { height:100%; min-height:400px; display:flex; flex-direction:column; width:100%; max-width:402px; margin:0 auto; padding-top:env(safe-area-inset-top,0px); }
+      .pc-identity { height:148px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:url('/startup/court.svg') center top / 100% 172px no-repeat; }
+      .pc-identity img, .pc-identity object { width:92px; height:90.695px; object-fit:contain; }
+      .pc-surface { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:24px; background:#fefefe; border-radius:24px 24px 0 0; padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px)); }
+      .pc-content { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:24px; }
+      .pc-content > * { flex-shrink:0; }
+      .pc-surface h1 { margin:0; font-size:24px; font-weight:600; line-height:32px; overflow-wrap:anywhere; }
+      .pc-surface h1:focus { outline:none; }
+      .pc-banner { display:flex; gap:12px; align-items:center; border:1px solid #fac5c5; border-radius:8px; padding:11px 12px; background:#fdecec; }
+      .pc-banner img { width:20px; height:20px; margin:2px; flex-shrink:0; }
+      .pc-banner strong { display:block; font-size:14px; line-height:20px; font-weight:600; }
+      .pc-banner p { margin:2px 0 0; font-size:12px; line-height:16px; color:#605e64; }
+      .pc-warning { background:#fef5e7; border-color:#fce1b3; }
+      .pc-info { background:#ebf3fe; border-color:#c2d8fc; }
+      .pc-instructions { margin:0; font-size:16px; line-height:24px; color:#605e64; }
+      .pc-actions { display:flex; flex-shrink:0; flex-direction:column; gap:12px; }
+      .pc-actions button { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:48px; padding:10px 24px; border:0; border-radius:8px; background:#c9cf38; color:#120f18; font:500 14px/21px Inter,system-ui,sans-serif; cursor:pointer; overflow-wrap:anywhere; }
+      .pc-actions .pc-secondary { background:#e7e7e8; color:#413f46; }
+      .pc-actions button:focus-visible { outline:2px solid #120f18; outline-offset:3px; }
+      .pc-actions button:disabled { background:#eef0c1; cursor:wait; }
+      .pc-spinner { width:20px; height:20px; animation:pc-spin 800ms linear infinite; }
+      @keyframes pc-spin { to { transform:rotate(360deg); } }
+      .pc-sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+      @media(prefers-reduced-motion:reduce) { .pc-logo::after { display:none; } .pc-spinner { animation:none; } }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@500&display=swap"
       rel="stylesheet"
+      media="(min-width: 768px)"
+      onload="this.media='all'"
     />
     <title>Padel Check - Gestión de torneos para clubes</title>
   </head>
   <body>
+    <div id="pc-startup" hidden>
+      <div id="pc-brand" class="pc-brand">
+        <span role="status" class="pc-sr">Preparando Padel Check</span>
+        <div class="pc-logo" aria-hidden="true"><img src="/startup/logo.png" alt="" width="141" height="139" /><span class="pc-logo-text" hidden>Padel Check</span></div>
+      </div>
+      <section id="pc-recovery" class="pc-recovery" hidden style="height:100%" aria-labelledby="pc-title">
+        <div class="pc-shell">
+          <div class="pc-identity"><img src="/startup/logo.png" alt="Padel Check" width="92" height="91" /><span class="pc-logo-text" hidden>Padel Check</span></div>
+          <div class="pc-surface">
+            <div class="pc-content">
+              <h1 id="pc-title" tabindex="-1">No pudimos iniciar Padel Check</h1>
+              <div id="pc-banner" class="pc-banner" role="status">
+                <img id="pc-error-icon" src="/startup/error.svg" alt="" width="20" height="20" />
+                <div><strong id="pc-message">El inicio se interrumpió</strong><p id="pc-detail">Volvé a intentarlo para continuar.</p></div>
+              </div>
+            </div>
+            <div class="pc-actions">
+              <button id="pc-retry" type="button">Reintentar</button>
+              <button id="pc-exit" type="button" class="pc-secondary" hidden>Volver al acceso</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
     <div id="root"></div>
+    <noscript>
+      <section class="pc-nojs" aria-labelledby="pc-nojs-title">
+        <div class="pc-shell">
+          <div class="pc-identity"><object data="/startup/logo.png" type="image/png" width="92" height="91" role="img" aria-label="Padel Check"><span class="pc-logo-text">Padel Check</span></object></div>
+          <div class="pc-surface">
+            <div class="pc-content">
+              <h1 id="pc-nojs-title">Habilitá JavaScript para continuar</h1>
+              <div class="pc-banner pc-warning"><img src="/startup/error.svg" alt="" width="20" height="20" /><div><strong>JavaScript está deshabilitado</strong><p>Padel Check necesita JavaScript para funcionar.</p></div></div>
+              <p class="pc-instructions">Habilitalo en la configuración de tu navegador y después recargá esta página desde el navegador.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </noscript>
+    <script>
+      (() => {
+        const layer = document.getElementById('pc-startup');
+        const root = document.getElementById('root');
+        const brand = document.getElementById('pc-brand');
+        const recovery = document.getElementById('pc-recovery');
+        const title = document.getElementById('pc-title');
+        const banner = document.getElementById('pc-banner');
+        const message = document.getElementById('pc-message');
+        const detail = document.getElementById('pc-detail');
+        const retry = document.getElementById('pc-retry');
+        const exit = document.getElementById('pc-exit');
+        const icon = document.getElementById('pc-error-icon');
+        const mobile = window.matchMedia('(max-width: 767px)').matches;
+        let phase = 'preparing';
+        let timer;
+        let mounted = false;
+        // Persist only a failure count, never a URL, credential or return path.
+        const failureKey = 'padelcheck_startup_failures';
+        let failures = 0;
+        try { failures = Math.max(0, Math.min(2, Number(sessionStorage.getItem(failureKey)) || 0)); } catch { failures = 1; /* Offer both actions when attempts cannot be remembered. */ }
+        function rememberFailure() {
+          failures++;
+          try { sessionStorage.setItem(failureKey, String(failures)); } catch { failures = Math.max(2, failures); }
+        }
+        function onError(event) {
+          if (event.target instanceof HTMLScriptElement && event.target.type === 'module') fail();
+        }
+        function cleanup() { clearTimeout(timer); window.removeEventListener('error', onError, true); }
+        function fail() {
+          if (phase !== 'preparing') return;
+          phase = 'failed';
+          cleanup();
+          rememberFailure();
+          layer.hidden = false;
+          root.inert = true;
+          brand.hidden = true;
+          recovery.hidden = false;
+          if (failures > 1) {
+            banner.className = 'pc-banner pc-warning';
+            message.textContent = 'El problema continúa';
+            detail.textContent = 'Podés reintentar o volver al acceso.';
+            exit.hidden = false;
+          }
+          title.focus();
+        }
+        function ready() {
+          // A late React mount cannot dismiss an already actionable recovery.
+          if (phase !== 'preparing') return;
+          phase = 'ready';
+          cleanup();
+          layer.remove();
+          root.inert = false;
+          try { sessionStorage.removeItem(failureKey); } catch { /* No startup state needs persistence. */ }
+        }
+        retry.addEventListener('click', () => {
+          if (phase !== 'failed') return;
+          phase = 'retrying';
+          title.textContent = 'Estamos preparando el inicio';
+          banner.className = 'pc-banner pc-info';
+          message.textContent = 'Reintentando';
+          detail.textContent = 'La pantalla estará disponible al terminar.';
+          icon.hidden = true;
+          retry.disabled = true;
+          retry.setAttribute('aria-busy', 'true');
+          retry.setAttribute('aria-label', 'Reintentando');
+          retry.replaceChildren();
+          const spinner = document.createElement('img');
+          spinner.src = '/startup/spinner.svg'; spinner.alt = ''; spinner.className = 'pc-spinner';
+          retry.append(spinner);
+          exit.disabled = true;
+          location.reload();
+        });
+        exit.addEventListener('click', () => {
+          if (phase !== 'failed') return;
+          try {
+            // Explicit logout only. A storage error keeps recovery and never grants access.
+            ['padelcheck_token', 'padelcheck_user', 'padelcheck_session_expires_at'].forEach(key => localStorage.removeItem(key));
+            location.replace('/login');
+          } catch {
+            detail.textContent = 'No pudimos cerrar la sesión local. Volvé a intentarlo.';
+            title.focus();
+          }
+        });
+        layer.querySelectorAll('img').forEach(img => {
+          const fallback = () => {
+            img.hidden = true;
+            const label = img.nextElementSibling;
+            if (label?.classList.contains('pc-logo-text')) label.hidden = false;
+            img.parentElement.classList.add('pc-degraded');
+          };
+          img.addEventListener('error', fallback, { once:true });
+          if (img.complete && !img.naturalWidth) fallback();
+        });
+        window.padelStartup = { ready, fail, mounted() {
+          if (phase !== 'preparing' || mounted) return;
+          mounted = true;
+          clearTimeout(timer);
+          // Give the existing /me deadline its full budget after a slow bundle download.
+          timer = window.setTimeout(fail, 15000);
+        } };
+        if (mobile) { layer.hidden = false; root.inert = true; }
+        window.addEventListener('error', onError, true);
+        // This is only an upper bound for startup failures, never a minimum display time.
+        // It is longer than the existing 10s session check.
+        timer = window.setTimeout(fail, 15000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

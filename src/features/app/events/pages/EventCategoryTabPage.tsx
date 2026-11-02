@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { StartupReady } from '@/features/startup/StartupReady'
 import { Navigate, useOutletContext, useParams } from 'react-router-dom'
 import { eventsMockService } from '../api/events.mock'
 import {
@@ -34,10 +35,10 @@ export function EventCategoryTabPage() {
 
   if (!event || !category) return null
 
-  if (tab === 'partidos') return <CategoryMatchesTab category={category} />
-  if (tab === 'inscripciones') return <CategoryRegistrationsTab category={category} />
-  if (tab === 'clasificatoria') return <CategoryQualifierTab category={category} />
-  return <CategoryBracketsTab category={category} />
+  if (tab === 'partidos') return <StartupReady><CategoryMatchesTab category={category} /></StartupReady>
+  if (tab === 'inscripciones') return <StartupReady><CategoryRegistrationsTab category={category} /></StartupReady>
+  if (tab === 'clasificatoria') return <StartupReady><CategoryQualifierTab category={category} /></StartupReady>
+  return <StartupReady><CategoryBracketsTab category={category} /></StartupReady>
 }
 
 export function LegacyEventTabRedirect({ tab }: { tab: 'inscripciones' | 'clasificatoria' | 'cuadros' }) {

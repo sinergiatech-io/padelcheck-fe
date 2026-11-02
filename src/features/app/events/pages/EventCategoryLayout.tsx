@@ -1,4 +1,5 @@
 import { Outlet, useParams } from 'react-router-dom'
+import { StartupReady } from '@/features/startup/StartupReady'
 import { useCallback, useEffect, useState } from 'react'
 import { eventsMockService } from '../api/events.mock'
 import { CategoryEnrollFab } from '../components/CategoryEnrollFab'
@@ -8,15 +9,16 @@ import { categoryEnrollFabScrollPadding } from '../components/category-enroll-fa
 import { CategorySelector } from '../components/CategorySelector'
 import { CategoryTabs } from '../components/CategoryTabs'
 import { EnrollmentModalProvider } from '../context/EnrollmentModalContext'
-import { findEventCategory } from '../category-routes'
+import { findEventCategory, isCategoryTab } from '../category-routes'
 import type { Event } from '../types'
 
 export function EventCategoryLayout() {
   const { eventId = '', categoryId = '', tab = '' } = useParams()
   const [event, setEvent] = useState<Event>()
+  const [loaded, setLoaded] = useState(false)
 
   const loadEvent = useCallback(() => {
-    eventsMockService.getEvent(eventId).then(setEvent)
+    eventsMockService.getEvent(eventId).then((value) => { setEvent(value); setLoaded(true) })
   }, [eventId])
 
   useEffect(() => {
@@ -25,8 +27,8 @@ export function EventCategoryLayout() {
 
   const category = findEventCategory(event, categoryId)
 
-  if (!event) return <p className="text-body-sm text-dark-700">Evento no encontrado.</p>
-  if (!category) return <p className="text-body-sm text-dark-700">Categoría no encontrada.</p>
+  if (!event) return <StartupReady enabled={loaded || isCategoryTab(tab)}><p className="text-body-sm text-dark-700">Evento no encontrado.</p></StartupReady>
+  if (!category) return <StartupReady><p className="text-body-sm text-dark-700">Categoría no encontrada.</p></StartupReady>
 
   return (
     <EnrollmentModalProvider>

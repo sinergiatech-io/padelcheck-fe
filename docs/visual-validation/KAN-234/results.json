@@ -1,0 +1,70 @@
+{
+  "browser": "156.0.8078.48",
+  "results": [
+    {
+      "name": "HTML visible before bundle; degraded logo/font; no minimum delay",
+      "passed": true,
+      "elapsedMs": 606
+    },
+    {
+      "name": "bundle failure, keyboard focus, repeated failure, retry and explicit exit",
+      "passed": true,
+      "elapsedMs": 515
+    },
+    {
+      "name": "retry returns to original deep link once bundle recovers",
+      "passed": true,
+      "elapsedMs": 237
+    },
+    {
+      "name": "retry is accessible, busy and preserves button geometry during document reload",
+      "passed": true,
+      "elapsedMs": 268
+    },
+    {
+      "name": "brand sheen runs once inside the image alpha and reduced motion is static",
+      "passed": true,
+      "elapsedMs": 250
+    },
+    {
+      "name": "watchdog; late ready ignored; second failure remains actionable",
+      "passed": true,
+      "elapsedMs": 15244
+    },
+    {
+      "name": "public entry does not wait for unrelated session validation",
+      "passed": true,
+      "elapsedMs": 211
+    },
+    {
+      "name": "slow bundle still allows the full existing session timeout",
+      "passed": true,
+      "elapsedMs": 16266
+    },
+    {
+      "name": "valid player/club/continuation sessions do not flash login",
+      "passed": true,
+      "elapsedMs": 641
+    },
+    {
+      "name": "expired/401 sessions retire access; 503/offline/timeout keep recovery and credentials",
+      "passed": true,
+      "elapsedMs": 10971
+    },
+    {
+      "name": "storage read/exit failures stay recoverable; corrupt cached principal uses /me",
+      "passed": true,
+      "elapsedMs": 370
+    },
+    {
+      "name": "JavaScript disabled has local identity, instructions and no JS action",
+      "passed": true,
+      "elapsedMs": 163
+    },
+    {
+      "name": "navigation, foreground and breakpoint changes never recreate launch; desktop keeps feedback",
+      "passed": true,
+      "elapsedMs": 1606
+    }
+  ]
+}

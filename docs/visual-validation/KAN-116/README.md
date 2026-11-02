@@ -34,7 +34,12 @@ both messages arrived in the inbox. SMTP credentials remain only in local/runtim
 configuration.
 
 The recipient also opened the real mailbox link and confirmed the screen shows
-**Email verificado** and the separate **Completar registro** action. This confirms real-email link verification, not
-account activation or native standalone handling. This particular SMTP test
-draft used a discarded random password; a usable personal account should start
-a fresh registration with a password chosen by its owner.
+**Email verificado** and the separate **Completar registro** action. The recipient
+then pressed completion, reported that the in-progress state looked correct
+(not captured), and supplied a screen showing **Tu cuenta está lista / Registro
+completado**. This confirms real-mail verification and activation in the local web
+test; it does not certify native standalone handling. Only textual confirmation
+is published. This SMTP test account used a discarded random password. Since it
+is now active, a new registration with the same email will conflict; manual login
+with this particular account remains unverified. The earlier automated real-login
+checks used separate synthetic accounts with known test passwords.

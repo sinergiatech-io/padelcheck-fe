@@ -148,7 +148,7 @@ export function LoginPage() {
           />
           <button
             type="button"
-            disabled
+            onClick={() => navigate('/forgot-password')}
             className="flex h-11 w-full items-center justify-center text-sm font-medium leading-5 text-[#120F18] disabled:opacity-100"
           >
             ¿Olvidaste tu contraseña?

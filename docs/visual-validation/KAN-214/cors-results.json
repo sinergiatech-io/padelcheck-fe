@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "allowedOrigin": "http://127.0.0.1:5173",
+  "limitedStatus": 429,
+  "retryAfterVisible": true,
+  "prematureRetryBlocked": true
+}

@@ -1,0 +1,22 @@
+@font-face{font-family:RecoveryInter;src:url('../../../assets/auth/fonts/Inter400.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:RecoveryInter;src:url('../../../assets/auth/fonts/Inter500.ttf') format('truetype');font-weight:500;font-display:swap}
+@font-face{font-family:RecoveryInter;src:url('../../../assets/auth/fonts/Inter600.ttf') format('truetype');font-weight:600;font-display:swap}
+.password-recovery{display:flex;justify-content:center;background:#120f18;color:#120f18;min-height:360px;padding-top:env(safe-area-inset-top);font-family:RecoveryInter,Inter,system-ui,sans-serif}
+.recovery-shell{width:100%;max-width:402px;display:flex;flex-direction:column;min-height:0}
+.recovery-brand{height:204px;flex-shrink:0;position:relative;overflow:hidden}
+.recovery-court{position:absolute;top:0;left:0;width:402px;max-width:none;height:228px;left:50%;transform:translateX(-50%)}
+.recovery-logo{position:absolute;top:51px;left:50%;transform:translateX(-50%);width:104px;height:102.525px;object-fit:contain}
+.recovery-brand.with-keyboard{height:72px}.with-keyboard .recovery-logo{top:8px;width:56px;height:55px}
+.recovery-surface{display:flex;flex:1;min-height:0;flex-direction:column;border-radius:24px 24px 0 0;background:#fefefe;overflow-y:auto}
+.recovery-content{display:flex;flex-direction:column;flex:1;gap:20px;padding:32px 16px 24px}
+.recovery-content h1{font-size:24px;font-weight:600;line-height:32px;outline:none}
+.recovery-content p{font-size:16px;line-height:24px;color:#605e64}
+.recovery-field{display:flex;flex-direction:column;gap:8px}.recovery-field label{font-size:14px;font-weight:500;line-height:20px}
+.password-recovery .recovery-input{height:56px;border:1px solid #929195;border-radius:8px;background:#fefefe;padding-left:16px;font-size:14px;font-weight:500;line-height:20px;box-shadow:none}
+.password-recovery .recovery-input::placeholder{color:#605e64}.password-recovery .recovery-input-error{border-color:#ef4444}.recovery-content .recovery-error{font-size:14px;line-height:20px;color:#aa3030;text-align:right;font-weight:500}
+.recovery-eye{position:absolute;right:4px;top:4px;width:48px;height:48px;display:flex;align-items:center;justify-content:center}
+.recovery-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
+.recovery-actions>button{width:100%;min-height:48px;border-radius:8px;font-size:14px;line-height:21px;font-weight:500;padding:10px 24px;display:flex;align-items:center;justify-content:center}
+.recovery-primary{background:#c9cf38}.recovery-primary:disabled{background:#eef0c1}.recovery-secondary{border:1px solid #929195;background:#fefefe}
+.recovery-success,.recovery-notice{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #baedcd;background:#e9f9ef;border-radius:8px}.recovery-success>img{width:24px;height:24px}.recovery-success strong,.recovery-notice strong{font-size:14px;line-height:20px;font-weight:600}.recovery-success p,.recovery-notice p{font-size:12px;line-height:16px;margin-top:2px}.recovery-notice{display:block;border-color:#fac5c5;background:#fdecec}
+.password-recovery button:focus-visible{outline:2px solid #120f18;outline-offset:2px}

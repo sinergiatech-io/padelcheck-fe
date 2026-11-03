@@ -1,0 +1,6 @@
+/reset-password
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+/forgot-password
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store

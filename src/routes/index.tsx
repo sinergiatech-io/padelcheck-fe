@@ -9,6 +9,7 @@ import { PricingPage } from '@/features/public/pricing/pages/PricingPage'
 import { FaqPage } from '@/features/public/faq/pages/FaqPage'
 import { acceptedReturnPath } from '@/features/auth/access-destination'
 import { ContinuePage } from '@/features/auth/pages/ContinuePage'
+import { RecoveryPage } from '@/features/auth/pages/RecoveryPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { PlayerRegisterPage } from '@/features/auth/pages/PlayerRegisterPage'
@@ -74,6 +75,8 @@ const router = createBrowserRouter(createRoutesFromElements(
             </RedirectIfAuthenticated>
           }
         />
+        <Route path="/forgot-password" element={<StartupReady><RecoveryPage /></StartupReady>} />
+        <Route path="/reset-password" element={<StartupReady><RecoveryPage reset /></StartupReady>} />
         <Route path={ROUTES.authContinue} element={<ContinueRoute />} />
         <Route path="/register/player" element={<RedirectIfAuthenticated><PlayerRegisterPage /></RedirectIfAuthenticated>} />
         <Route path="/register/player/verify" element={<StartupReady><PlayerRegisterPage /></StartupReady>} />

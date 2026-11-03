@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "backend": "real integrated contract v1.1, isolated kan214_runtime schema and local SMTP receiver",
+  "checks": [
+    {
+      "name": "login entry, field errors and generic request using real API",
+      "passed": true
+    },
+    {
+      "name": "real RESET_PASSWORD inspection, Save, session retirement and login",
+      "passed": true
+    },
+    {
+      "name": "real CREATE_PASSWORD inspection, Save, session retirement and login",
+      "passed": true
+    },
+    {
+      "name": "blocked and unverified accounts preserve eligibility after real recovery",
+      "passed": true
+    },
+    {
+      "name": "real replaced and expired links share unavailable screen",
+      "passed": true
+    },
+    {
+      "name": "responsive widths, scroll, focus and real input geometry",
+      "passed": true
+    },
+    {
+      "name": "inspection 503 retry, unknown capability closed, no bearer or proof in referrer",
+      "passed": true
+    },
+    {
+      "name": "save failure retains values; busy single flight and Retry-After block premature retry",
+      "passed": true
+    }
+  ]
+}

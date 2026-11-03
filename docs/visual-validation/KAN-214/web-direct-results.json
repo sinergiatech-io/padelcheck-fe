@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "checks": [
+    "missing proof direct entry and return to email",
+    "unknown proof rejected by real inspect",
+    "history sanitized"
+  ]
+}

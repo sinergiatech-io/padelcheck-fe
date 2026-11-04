@@ -64,6 +64,10 @@ export function LoginPage() {
       const accepted = login(data.accessToken, data.context, data.expiresIn)
       if (!accepted) return
       const destination = resolveAccessDestination(data.context.accessContexts)
+      if (data.context.platformRole === 'SUPER_ADMIN') {
+        navigate('/owner', { replace: true })
+        return
+      }
       navigate(acceptedReturnPath('web', destination, searchParams.get('returnUrl')), { replace: true })
     } catch (error) {
       setFormError(loginErrorMessage(error))

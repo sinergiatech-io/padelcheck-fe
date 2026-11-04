@@ -28,6 +28,9 @@ import {
   LegacyEventTabRedirect,
 } from '@/features/app/events/pages/EventCategoryTabPage'
 import { EventCategoryEnrollPage } from '@/features/app/events/pages/EventCategoryEnrollPage'
+import { OwnerBillingPage } from '@/features/owner/OwnerBillingPage'
+import { OwnerCatalogPage } from '@/features/owner/OwnerCatalogPage'
+import { OwnerGate } from '@/features/owner/OwnerGate'
 import { ProtectedRoute } from './ProtectedRoute'
 import { StartupReady, StartupRouteError } from '@/features/startup/StartupReady'
 
@@ -49,7 +52,7 @@ function ContinueRoute() {
 }
 
 function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, destination, phase } = useAuth()
+  const { isAuthenticated, isLoading, destination, phase, user } = useAuth()
   if (phase === 'unverified') return <SessionUnverifiedPage />
   if (isLoading) {
     return (
@@ -57,6 +60,9 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
       </div>
     )
+  }
+  if (isAuthenticated && user?.platformRole === 'SUPER_ADMIN') {
+    return <Navigate to="/owner" replace />
   }
   if (isAuthenticated && destination) {
     return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
@@ -126,6 +132,8 @@ const router = createBrowserRouter(createRoutesFromElements(
           <Route path="my-tournaments" element={<StartupReady><MyTournamentsPage /></StartupReady>} />
         </Route>
 
+        <Route path="/owner" element={<OwnerGate><OwnerBillingPage /></OwnerGate>} />
+        <Route path="/owner/catalog" element={<OwnerGate><OwnerCatalogPage /></OwnerGate>} />
         <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
       </Route>
 ))

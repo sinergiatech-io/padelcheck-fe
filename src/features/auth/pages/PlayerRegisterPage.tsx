@@ -4,6 +4,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
 import { usePlayerRegistration, statusCopy, type Proof } from '@/features/auth/player-registration'
+import { useRegistrationLocation } from '@/features/auth/use-registration-location'
+import { browserPosition } from '@/features/auth/browser-location'
+import { RegistrationLocationFields } from '@/features/auth/RegistrationLocationFields'
 import court from '@/assets/auth/court.svg?url'
 import logo from '@/assets/auth/logo.png'
 import eye from '@/assets/auth/eye.svg?url'
@@ -54,6 +57,7 @@ export function PlayerRegisterPage() {
   } : undefined)
   const registration = usePlayerRegistration('WEB', initialProof)
   const { draft, updateField, errors, categories, catalogState, retryCatalog, stage, proof, busy, busyAction, notice, resent, action } = registration
+  const geography = useRegistrationLocation(browserPosition, stage === 'form')
   const [showPassword, setShowPassword] = useState(false)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const returnUrl = params.get('returnUrl')
@@ -64,7 +68,7 @@ export function PlayerRegisterPage() {
   useEffect(() => { titleRef.current?.focus() }, [stage])
   const setField = updateField
   const button = (label: string, onClick: () => void, type: 'submit' | 'button' = 'button') => <button type={type} onClick={onClick}
-    disabled={busy || stage === 'verifying'} aria-busy={busy || stage === 'verifying'} aria-label={busy ? `${label}…` : label}
+    disabled={busy || stage === 'verifying' || stage === 'form' && geography.state.mode === 'detecting'} aria-busy={busy || stage === 'verifying'} aria-label={busy ? `${label}…` : label}
     className={`flex h-12 w-full shrink-0 items-center justify-center rounded-[8px] text-sm font-medium ${busy ? 'bg-[#EEF0C1]' : 'bg-[#C9CF38]'}`}>
     <ButtonLoadingContent loading={busy || stage === 'verifying'}>{label}</ButtonLoadingContent>
   </button>
@@ -86,10 +90,14 @@ export function PlayerRegisterPage() {
     </div></Shell>
   }
   return <Shell><form noValidate className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 pb-8 pt-6" onSubmit={event => {
-    event.preventDefault(); void action('start').then(() => requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()))
+    event.preventDefault(); geography.model.validate(); void action('start', geography.model.request()).then(() => requestAnimationFrame(() => {
+      const invalid = [...document.querySelectorAll<HTMLElement>('[aria-invalid="true"]')]
+      ;(invalid.find(field => !field.hasAttribute('disabled')) ?? invalid[0])?.focus()
+    }))
   }}>
     {heading('Creá tu cuenta de jugador', 'Completá tus datos y elegí tu categoría para empezar.')}
     {notice && <Banner title={notice} detail="Intentá de nuevo." />}
+    <RegistrationLocationFields model={geography.model} state={geography.state} disabled={busy} />
     <div className="flex flex-col gap-3">
       {(['firstName', 'lastName', 'email', 'password', 'gender', 'baseCategoryId'] as const).map(key => {
         const label = { firstName: 'Nombre', lastName: 'Apellido', email: 'Email', password: 'Contraseña', gender: 'Sexo', baseCategoryId: 'Categoría' }[key]
@@ -112,7 +120,7 @@ export function PlayerRegisterPage() {
     </div>
     <p className="text-base leading-6 text-[#605E64]">Vas a necesitar verificar tu email para activar tu cuenta.</p>
     <div className="flex flex-col gap-2">{button(notice ? 'Reintentar' : 'Crear cuenta', () => {}, 'submit')}
-      <div className="flex min-h-11 items-center justify-center gap-2 text-sm font-medium"><span className="text-[#605E64]">¿Ya tenés cuenta?</span><Link className="flex min-h-11 items-center px-3" to={loginPath}>Iniciar sesión</Link></div>
+      <div className="flex min-h-11 items-center justify-center gap-2 text-sm font-medium"><span className="text-[#605E64]">¿Ya tenés cuenta?</span><Link aria-disabled={busy} onClick={event => { if (busy) event.preventDefault() }} className={`flex min-h-11 items-center px-3 ${busy ? 'text-[#929195]' : ''}`} to={loginPath}>Iniciar sesión</Link></div>
     </div>
   </form></Shell>
 }

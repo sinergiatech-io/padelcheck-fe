@@ -68,7 +68,7 @@ export function PlayerRegisterPage() {
   useEffect(() => { titleRef.current?.focus() }, [stage])
   const setField = updateField
   const button = (label: string, onClick: () => void, type: 'submit' | 'button' = 'button') => <button type={type} onClick={onClick}
-    disabled={busy || stage === 'verifying' || stage === 'form' && geography.state.mode === 'detecting'} aria-busy={busy || stage === 'verifying'} aria-label={busy ? `${label}…` : label}
+    disabled={busy || stage === 'verifying'} aria-busy={busy || stage === 'verifying'} aria-label={busy ? `${label}…` : label}
     className={`flex h-12 w-full shrink-0 items-center justify-center rounded-[8px] text-sm font-medium ${busy ? 'bg-[#EEF0C1]' : 'bg-[#C9CF38]'}`}>
     <ButtonLoadingContent loading={busy || stage === 'verifying'}>{label}</ButtonLoadingContent>
   </button>
@@ -97,7 +97,6 @@ export function PlayerRegisterPage() {
   }}>
     {heading('Creá tu cuenta de jugador', 'Completá tus datos y elegí tu categoría para empezar.')}
     {notice && <Banner title={notice} detail="Intentá de nuevo." />}
-    <RegistrationLocationFields model={geography.model} state={geography.state} disabled={busy} />
     <div className="flex flex-col gap-3">
       {(['firstName', 'lastName', 'email', 'password', 'gender', 'baseCategoryId'] as const).map(key => {
         const label = { firstName: 'Nombre', lastName: 'Apellido', email: 'Email', password: 'Contraseña', gender: 'Sexo', baseCategoryId: 'Categoría' }[key]
@@ -117,6 +116,7 @@ export function PlayerRegisterPage() {
           {key === 'baseCategoryId' && catalogState === 'error' && <div role="status"><p className="text-sm text-[#AA3030]">No pudimos cargar las categorías.</p><button type="button" onClick={retryCatalog} className="min-h-11 text-sm underline">Reintentar</button></div>}
         </div>
       })}
+      <RegistrationLocationFields model={geography.model} state={geography.state} disabled={busy} />
     </div>
     <p className="text-base leading-6 text-[#605E64]">Vas a necesitar verificar tu email para activar tu cuenta.</p>
     <div className="flex flex-col gap-2">{button(notice ? 'Reintentar' : 'Crear cuenta', () => {}, 'submit')}

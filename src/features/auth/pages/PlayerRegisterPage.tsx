@@ -4,6 +4,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
 import { usePlayerRegistration, statusCopy, type Proof } from '@/features/auth/player-registration'
+import { useRegistrationLocation } from '@/features/auth/use-registration-location'
+import { browserPosition } from '@/features/auth/browser-location'
+import { RegistrationLocationFields } from '@/features/auth/RegistrationLocationFields'
 import court from '@/assets/auth/court.svg?url'
 import logo from '@/assets/auth/logo.png'
 import eye from '@/assets/auth/eye.svg?url'
@@ -54,6 +57,7 @@ export function PlayerRegisterPage() {
   } : undefined)
   const registration = usePlayerRegistration('WEB', initialProof)
   const { draft, updateField, errors, categories, catalogState, retryCatalog, stage, proof, busy, busyAction, notice, resent, action } = registration
+  const geography = useRegistrationLocation(browserPosition, stage === 'form')
   const [showPassword, setShowPassword] = useState(false)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const returnUrl = params.get('returnUrl')
@@ -86,7 +90,10 @@ export function PlayerRegisterPage() {
     </div></Shell>
   }
   return <Shell><form noValidate className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 pb-8 pt-6" onSubmit={event => {
-    event.preventDefault(); void action('start').then(() => requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()))
+    event.preventDefault(); geography.model.validate(); void action('start', geography.model.request()).then(() => requestAnimationFrame(() => {
+      const invalid = [...document.querySelectorAll<HTMLElement>('[aria-invalid="true"]')]
+      ;(invalid.find(field => !field.hasAttribute('disabled')) ?? invalid[0])?.focus()
+    }))
   }}>
     {heading('Creá tu cuenta de jugador', 'Completá tus datos y elegí tu categoría para empezar.')}
     {notice && <Banner title={notice} detail="Intentá de nuevo." />}
@@ -109,10 +116,11 @@ export function PlayerRegisterPage() {
           {key === 'baseCategoryId' && catalogState === 'error' && <div role="status"><p className="text-sm text-[#AA3030]">No pudimos cargar las categorías.</p><button type="button" onClick={retryCatalog} className="min-h-11 text-sm underline">Reintentar</button></div>}
         </div>
       })}
+      <RegistrationLocationFields model={geography.model} state={geography.state} disabled={busy} />
     </div>
     <p className="text-base leading-6 text-[#605E64]">Vas a necesitar verificar tu email para activar tu cuenta.</p>
     <div className="flex flex-col gap-2">{button(notice ? 'Reintentar' : 'Crear cuenta', () => {}, 'submit')}
-      <div className="flex min-h-11 items-center justify-center gap-2 text-sm font-medium"><span className="text-[#605E64]">¿Ya tenés cuenta?</span><Link className="flex min-h-11 items-center px-3" to={loginPath}>Iniciar sesión</Link></div>
+      <div className="flex min-h-11 items-center justify-center gap-2 text-sm font-medium"><span className="text-[#605E64]">¿Ya tenés cuenta?</span><Link aria-disabled={busy} onClick={event => { if (busy) event.preventDefault() }} className={`flex min-h-11 items-center px-3 ${busy ? 'text-[#929195]' : ''}`} to={loginPath}>Iniciar sesión</Link></div>
     </div>
   </form></Shell>
 }

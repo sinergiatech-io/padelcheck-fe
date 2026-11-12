@@ -40,7 +40,7 @@ export function CategoryPolicyPage() {
     window.addEventListener('beforeunload', onUnload)
     return () => window.removeEventListener('beforeunload', onUnload)
   }, [policy.dirty, policy.saving])
-  const back = () => navigate('/app')
+  const back = () => navigate('/club/settings')
   return (
     <div className="flex h-dvh flex-col bg-background text-dark-900">
       <header className="flex h-14 shrink-0 items-center bg-[#100e16] px-4 text-white">
@@ -80,7 +80,7 @@ export function CategoryPolicyPage() {
         {policy.loadError ? <Button className="mx-auto flex h-12 w-full max-w-xl rounded-lg" onClick={() => void policy.reload()}>Reintentar</Button> :
         <Button className={`mx-auto flex h-12 w-full max-w-xl rounded-lg text-sm transition-none hover:bg-primary-500 active:bg-primary-500 disabled:opacity-100 ${!policy.dirty && !policy.saving ? 'disabled:bg-[#eef0c1] disabled:text-[#605e64]' : ''}`} loading={policy.saving} loadingLabel="Guardando…" disabled={!policy.dirty} onClick={() => void policy.save()}>Guardar cambios</Button>}
       </footer>}
-      <ClubBottomNav onDashboard={back} onClub={back} busy={policy.saving} />
+      <ClubBottomNav onDashboard={() => navigate('/app')} onClub={back} busy={policy.saving} />
       <dialog ref={dialog} aria-labelledby="discard-title" onCancel={event => { event.preventDefault(); if (blocker.state === 'blocked') blocker.reset() }} className="w-[calc(100%-2rem)] max-w-sm rounded-xl bg-surface p-6 text-dark-900 backdrop:bg-black/40">
         <h2 id="discard-title" className="text-lg font-semibold">¿Descartar los cambios?</h2>
         <p className="mt-2 text-sm">Tenés cambios sin guardar.</p>

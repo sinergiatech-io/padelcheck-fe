@@ -1,0 +1,146 @@
+{
+  "date": "2026-11-12",
+  "reference": {
+    "fileKey": "6ChpVD5gKDoC3kRXoGdVdK",
+    "nodeId": "3290:23621",
+    "frame": [
+      402,
+      874
+    ],
+    "web": [
+      402,
+      789
+    ],
+    "excludedIllustrativeInsets": [
+      51,
+      34
+    ]
+  },
+  "backend": "real local Spring API, isolated PostgreSQL, loopback SMTP receiver",
+  "browser": "installed Microsoft Edge controlled through Playwright",
+  "geolocation": "browser permission and coordinate fixtures; real /locations/resolve and official upstream GeoRef; no physical GPS claim",
+  "faultInjection": "only two browser network interruptions (catalog and start); recovered requests use real API; no route.fulfill or synthetic catalog/resolver",
+  "cases": [
+    {
+      "name": "real catalog loads 24 provinces and dependent Buenos Aires localities",
+      "passed": true,
+      "localityCount": 889
+    },
+    {
+      "name": "denied permission uses manual selection",
+      "passed": true
+    },
+    {
+      "name": "province change clears locality and restores its placeholder",
+      "passed": true
+    },
+    {
+      "name": "missing locality validation and real manual CABA start without device coordinates",
+      "passed": true
+    },
+    {
+      "name": "real SMTP loopback verification and activation returns active screen",
+      "passed": true,
+      "statuses": {
+        "start": 201,
+        "verify": 200,
+        "complete": 201
+      }
+    },
+    {
+      "name": "real reverse resolves emulated Tandil device position once and fills always-visible selectors",
+      "passed": true
+    },
+    {
+      "name": "final field order and approved 56px/370px geometry at 402 CSS px",
+      "passed": true
+    },
+    {
+      "name": "controlled browser network fault preserves draft and real retry submits the detected point",
+      "passed": true
+    },
+    {
+      "name": "automatic real registration verifies via local SMTP and activates",
+      "passed": true
+    },
+    {
+      "name": "real resolver outside coverage leaves empty selectors and manual fallback does not ask location again",
+      "passed": true
+    },
+    {
+      "name": "compact 360x720 form has no horizontal overflow and final CTA remains reachable by scroll",
+      "passed": true
+    },
+    {
+      "name": "browser network fault on catalog recovers via real retry with 24 provinces and preserves draft",
+      "passed": true
+    },
+    {
+      "name": "changing an automatically detected Tandil point to manual CABA removes device coordinates in the actual start request",
+      "passed": true
+    }
+  ],
+  "assets": [
+    {
+      "name": "court.svg",
+      "loaded": true,
+      "rect": {
+        "width": 402,
+        "height": 172
+      }
+    },
+    {
+      "name": "Padel Check",
+      "loaded": true,
+      "rect": {
+        "width": 92,
+        "height": 91
+      }
+    },
+    {
+      "name": "eye.svg",
+      "loaded": true,
+      "rect": {
+        "width": 24,
+        "height": 24
+      }
+    },
+    {
+      "name": "register-chevron.svg",
+      "loaded": true,
+      "rect": {
+        "width": 24,
+        "height": 24
+      }
+    },
+    {
+      "name": "register-chevron.svg",
+      "loaded": true,
+      "rect": {
+        "width": 24,
+        "height": 24
+      }
+    },
+    {
+      "name": "register-chevron.svg",
+      "loaded": true,
+      "rect": {
+        "width": 24,
+        "height": 24
+      }
+    },
+    {
+      "name": "register-chevron.svg",
+      "loaded": true,
+      "rect": {
+        "width": 24,
+        "height": 24
+      }
+    }
+  ],
+  "limitations": [
+    "Android delegated externally, not touched",
+    "iOS runtime excluded by user for lack of Mac/resources",
+    "browser native permission UI not manually exercised; permission states controlled via browser automation"
+  ]
+}

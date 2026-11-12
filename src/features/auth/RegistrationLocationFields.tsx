@@ -23,7 +23,7 @@ export function RegistrationLocationFields({ model, state, disabled }: { model: 
     </div>
     <div className="flex flex-col gap-2">
       <label htmlFor="province" className="text-sm font-medium leading-5">Provincia<span className="ml-0.5 text-[#EF4444]" aria-hidden="true">*</span></label>
-      <Select value={state.province?.id} onValueChange={id => { const province = provinceOptions.find(item => item.id === id); if (province) void model.selectProvince(province) }} disabled={provinceDisabled} required>
+      <Select value={state.province?.id ?? ''} onValueChange={id => { const province = provinceOptions.find(item => item.id === id); if (province) void model.selectProvince(province) }} disabled={provinceDisabled} required>
         <SelectTrigger id="province" aria-label="Provincia" aria-required="true" aria-invalid={!!state.errors.province} aria-describedby={state.errors.province ? 'province-error' : undefined} className={`${fieldClass} disabled:opacity-100 data-[placeholder]:text-[#605E64] ${state.errors.province ? 'border-[#EF4444]' : ''}`} indicator={<img src={chevron} alt="" />}>
           <SelectValue placeholder={state.provinceStatus === 'loading' ? 'Cargando provincias…' : 'Seleccioná una provincia'} />
         </SelectTrigger>
@@ -34,7 +34,7 @@ export function RegistrationLocationFields({ model, state, disabled }: { model: 
     </div>
     <div className="flex flex-col gap-2">
       <label htmlFor="locality" className="text-sm font-medium leading-5">Localidad<span className="ml-0.5 text-[#EF4444]" aria-hidden="true">*</span></label>
-      <Select value={state.selection?.localityId} onValueChange={id => { const locality = localityOptions.find(item => item.id === id); if (locality) model.selectLocality(locality) }} disabled={localityDisabled} required>
+      <Select value={state.selection?.localityId ?? ''} onValueChange={id => { const locality = localityOptions.find(item => item.id === id); if (locality) model.selectLocality(locality) }} disabled={localityDisabled} required>
         <SelectTrigger id="locality" aria-label="Localidad" aria-required="true" aria-invalid={!!state.errors.locality} aria-describedby={state.errors.locality ? 'locality-error' : undefined} className={`${fieldClass} ${!state.province && !disabled ? 'disabled:opacity-100' : ''} data-[placeholder]:text-[#605E64] ${state.errors.locality ? 'border-[#EF4444]' : ''}`} indicator={<img src={chevron} alt="" />}>
           <SelectValue placeholder={!state.province || state.localityStatus !== 'loading' || state.selection ? 'Seleccioná una localidad' : 'Cargando localidades…'} />
         </SelectTrigger>

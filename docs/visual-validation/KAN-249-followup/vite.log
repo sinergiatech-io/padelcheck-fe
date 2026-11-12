@@ -1,0 +1,7 @@
+Re-optimizing dependencies because vite config has changed
+
+  VITE v5.4.21  ready in 7159 ms
+
+  ➜  Local:   http://127.0.0.1:5189/
+  ➜  press h + enter to show help
+12:14:57 [vite] hmr update /src/features/auth/RegistrationLocationFields.tsx, /src/styles/globals.css

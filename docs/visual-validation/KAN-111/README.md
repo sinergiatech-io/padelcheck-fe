@@ -68,3 +68,8 @@ no bulk prefetch, no API key and a manual fallback when tiles are unavailable.
 Android has independent evidence in the mobile PR. iOS runtime is expressly
 excluded by the user's resource decision; this web evidence does not claim it.
 No merge or deploy is performed by this report.
+# Initial list loading — 13 November 2026
+
+User decision: show an animated spinner in the disabled initial-list CTA, without visible loading text or plus. This supersedes the older “Cargando…” label in the Figma/Jira initial-loading reference. Reused Button loading with a localized accessible name and busy state; three solid 158px gray skeletons retain the reference geometry. Applies to this initial-list CTA at every web width; existing save-button viewport rules remain unchanged.
+
+Real Edge/API verification at 402×823: three skeletons, disabled/busy CTA, hidden label, no plus, spinner rotation changes between frames, and Nueva sede restored after the real API resolves. Screenshot: [web-initial-loading.png](web-initial-loading.png). TypeScript and focused ESLint pass. This presentation change does not affect the previously verified CRUD, lifecycle, location or refresh flows.

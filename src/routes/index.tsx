@@ -1,6 +1,9 @@
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider } from 'react-router-dom'
 import { CategoryPolicyPage } from '@/features/club/category-policy/CategoryPolicyPage'
 import { ClubVenuesPage, MyClubPage } from '@/features/club/venues/ClubVenuesPage'
+import { ClubInfoPage } from '@/features/club/profile/ClubInfoPage'
+import { ClubSportSettingsPage } from '@/features/club/profile/ClubSportSettingsPage'
+import { ClubPublicProfilePage } from '@/features/club/profile/ClubPublicProfilePage'
 import { useAuth } from '@/context/AuthContext'
 import { ROUTES } from '@/lib/constants'
 import PublicLayout from '@/features/public/shared/layouts/PublicLayout'
@@ -74,8 +77,12 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
 const router = createBrowserRouter(createRoutesFromElements(
       <Route errorElement={<StartupRouteError />}>
         <Route path="/club/settings" element={<ProtectedRoute><StartupReady><MyClubPage /></StartupReady></ProtectedRoute>} />
+        <Route path="/club/settings/info" element={<ProtectedRoute><StartupReady><ClubInfoPage /></StartupReady></ProtectedRoute>} />
+        <Route path="/club/settings/info/preview" element={<ProtectedRoute><StartupReady><ClubPublicProfilePage preview /></StartupReady></ProtectedRoute>} />
+        <Route path="/club/settings/tournaments" element={<ProtectedRoute><StartupReady><ClubSportSettingsPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/settings/venues/*" element={<ProtectedRoute><StartupReady><ClubVenuesPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/settings/categories" element={<ProtectedRoute><StartupReady><CategoryPolicyPage /></StartupReady></ProtectedRoute>} />
+        <Route path="/clubs/:clubId/public" element={<StartupReady><ClubPublicProfilePage /></StartupReady>} />
         <Route
           path={ROUTES.login}
           element={

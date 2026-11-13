@@ -97,10 +97,18 @@ function FramingEditor({ title, src, initial, aspect, onCancel, onApply }: {
 }
 
 function EditFab({ label, className, onClick, disabled }: { label: string; className?: string; onClick: () => void; disabled?: boolean }) {
-  // Figma: 44×44 hit target, white pencil glyph ~32 on dark circle.
+  // KAN-106 / Figma: 44×44 touch target, white 32 disk, dark pencil (no invert on black).
   return (
-    <button type="button" aria-label={label} disabled={disabled} onClick={onClick} className={`flex h-11 w-11 items-center justify-center rounded-full bg-[#100e16] shadow-sm ${className ?? ''}`}>
-      <img src={editIcon} alt="" width={32} height={32} className="invert" />
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex h-11 w-11 items-center justify-center bg-transparent ${className ?? ''}`}
+    >
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm">
+        <img src={editIcon} alt="" width={20} height={20} />
+      </span>
     </button>
   )
 }
@@ -190,14 +198,17 @@ export function ClubInfoPage() {
                 />
               )}
 
-              <section className="overflow-visible rounded-xl bg-white p-3 shadow-sm">
-                <div className="relative overflow-hidden rounded-lg bg-[#e7e7e8]">
+              <section className="overflow-visible rounded-xl bg-white shadow-sm">
+                {/* Cover full-bleed inside card (no inner horizontal pad); 370×184 when present, h-96 when absent. */}
+                <div
+                  className={`relative w-full overflow-hidden rounded-t-xl bg-[#e7e7e8] ${
+                    draft.coverPhotoUrl && !draft.clearCover ? 'aspect-[370/184]' : 'h-24'
+                  }`}
+                >
                   {draft.coverPhotoUrl && !draft.clearCover ? (
-                    <div className="relative h-[120px] w-full overflow-hidden">
-                      <img src={draft.coverPhotoUrl} alt="" className="h-full w-full" style={framedMediaStyle(draft.coverFraming, 'cover')} />
-                    </div>
+                    <img src={draft.coverPhotoUrl} alt="" className="h-full w-full" style={framedMediaStyle(draft.coverFraming, 'cover')} />
                   ) : (
-                    <div className="flex h-[72px] items-center justify-center">
+                    <div className="flex h-full items-center justify-center">
                       <button
                         type="button"
                         disabled={busy}
@@ -232,7 +243,7 @@ export function ClubInfoPage() {
                   )}
                 </div>
 
-                <div className="relative mt-3 flex items-center gap-3">
+                <div className="relative flex items-center gap-3 p-4">
                   <div className="relative h-16 w-16 shrink-0">
                     <div className="h-16 w-16 overflow-hidden rounded-xl bg-[#100e16]">
                       {draft.logoUrl && !draft.clearLogo ? (
@@ -280,7 +291,7 @@ export function ClubInfoPage() {
                   </div>
                 </div>
                 {(profile.fieldErrors.logo || profile.fieldErrors.cover) && (
-                  <p className="mt-2 text-sm text-[#aa3030]">{profile.fieldErrors.logo || profile.fieldErrors.cover}</p>
+                  <p className="px-4 pb-3 text-sm text-[#aa3030]">{profile.fieldErrors.logo || profile.fieldErrors.cover}</p>
                 )}
               </section>
 

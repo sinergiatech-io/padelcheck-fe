@@ -97,9 +97,10 @@ function FramingEditor({ title, src, initial, aspect, onCancel, onApply }: {
 }
 
 function EditFab({ label, className, onClick, disabled }: { label: string; className?: string; onClick: () => void; disabled?: boolean }) {
+  // Figma: 44×44 hit target, white pencil glyph ~32 on dark circle.
   return (
-    <button type="button" aria-label={label} disabled={disabled} onClick={onClick} className={`flex h-11 w-11 items-center justify-center rounded-full bg-[#100e16] ${className ?? ''}`}>
-      <img src={editIcon} alt="" width={18} height={18} className="invert" />
+    <button type="button" aria-label={label} disabled={disabled} onClick={onClick} className={`flex h-11 w-11 items-center justify-center rounded-full bg-[#100e16] shadow-sm ${className ?? ''}`}>
+      <img src={editIcon} alt="" width={32} height={32} className="invert" />
     </button>
   )
 }
@@ -189,16 +190,25 @@ export function ClubInfoPage() {
                 />
               )}
 
-              <section className="relative">
-                <div className="relative rounded-xl bg-[#e7e7e8]" style={{ aspectRatio: '370/184' }}>
-                  <div className="absolute inset-0 overflow-hidden rounded-xl">
-                    {draft.coverPhotoUrl && !draft.clearCover ? (
-                      <img src={draft.coverPhotoUrl} alt="" style={framedMediaStyle(draft.coverFraming, 'cover')} />
-                    ) : (
-                      <div className="flex h-24 items-center justify-center text-sm text-[#605e64]">Sin portada</div>
-                    )}
-                  </div>
-                  <div className="absolute bottom-3 right-3 z-20">
+              <section className="overflow-visible rounded-xl bg-white p-3 shadow-sm">
+                <div className="relative overflow-hidden rounded-lg bg-[#e7e7e8]">
+                  {draft.coverPhotoUrl && !draft.clearCover ? (
+                    <div className="relative h-[120px] w-full overflow-hidden">
+                      <img src={draft.coverPhotoUrl} alt="" className="h-full w-full" style={framedMediaStyle(draft.coverFraming, 'cover')} />
+                    </div>
+                  ) : (
+                    <div className="flex h-[72px] items-center justify-center">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => coverInput.current?.click()}
+                        className="rounded-lg bg-[#f7f7f7] px-3 py-2 text-sm font-medium text-[#413f46]"
+                      >
+                        Agregar portada
+                      </button>
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 right-2 z-20">
                     <EditFab
                       label="Editar portada"
                       disabled={busy}
@@ -218,17 +228,25 @@ export function ClubInfoPage() {
                     />
                   </div>
                   {profile.uploading === 'cover' && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 text-sm text-white">Subiendo portada…</div>
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 text-sm text-white">Subiendo portada…</div>
                   )}
                 </div>
 
-                <div className="relative -mt-10 flex items-end gap-3 px-1">
-                  <div className="relative h-20 w-20 shrink-0">
-                    <div className="h-20 w-20 overflow-hidden rounded-xl border-4 border-[#f7f7f7] bg-[#100e16]">
+                <div className="relative mt-3 flex items-center gap-3">
+                  <div className="relative h-16 w-16 shrink-0">
+                    <div className="h-16 w-16 overflow-hidden rounded-xl bg-[#100e16]">
                       {draft.logoUrl && !draft.clearLogo ? (
                         <img src={draft.logoUrl} alt="" style={framedMediaStyle(draft.logoFraming, 'contain')} />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-[10px] text-[#fafaeb]">Logo</div>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          aria-label="Agregar logo"
+                          onClick={() => logoInput.current?.click()}
+                          className="flex h-full w-full items-center justify-center text-2xl text-[#fafaeb]"
+                        >
+                          +
+                        </button>
                       )}
                     </div>
                     <div className="absolute -bottom-1 -right-1 z-20">
@@ -254,9 +272,9 @@ export function ClubInfoPage() {
                       <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 text-[10px] text-white">…</div>
                     )}
                   </div>
-                  <div className="pb-1">
-                    <p className="text-lg font-semibold">{draft.name || 'Club'}</p>
-                    <button type="button" className="text-sm font-medium text-[#5b6b00] underline" onClick={() => navigate('/club/settings/info/preview')}>
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold leading-6">{draft.name || 'Club'}</p>
+                    <button type="button" className="text-sm font-medium text-[#413f46]" onClick={() => navigate('/club/settings/info/preview')}>
                       Ver perfil público
                     </button>
                   </div>

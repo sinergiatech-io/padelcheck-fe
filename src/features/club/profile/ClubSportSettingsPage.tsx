@@ -9,7 +9,9 @@ import { ClubBottomNav } from '../category-policy/ClubBottomNav'
 import checkIcon from '@/assets/category-policy/check.svg'
 import errorIcon from '@/assets/category-policy/error.svg'
 import plusIcon from '@/assets/venues/plus.svg'
-import { WEEKDAYS, daySummary } from './club-profile-model'
+import chevronIcon from '@/assets/venues/chevron.svg'
+import trashIcon from '@/assets/club/trash.svg'
+import { WEEKDAYS, daySummary, weekSummary } from './club-profile-model'
 import { useSportSettings } from './use-sport-settings'
 
 const field = 'h-14 w-full rounded-lg border border-[#929195] bg-[#fefefe] px-4 text-sm font-medium shadow-none'
@@ -61,44 +63,74 @@ export function ClubSportSettingsPage() {
         </header>
         <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
           <div className="mx-auto flex max-w-xl flex-col gap-6">
-            <div className="flex items-center justify-between rounded-xl bg-white p-4">
-              <div><p className="text-sm font-medium">Abierto</p><p className="text-xs text-[#605e64]">Apagá el switch para marcar cerrado</p></div>
+            <div className="flex items-center justify-between py-1">
+              <p className="text-sm font-medium">Abierto</p>
               <Switch checked={open} onCheckedChange={checked => settings.setDayDraft({
                 day: day.day,
-                value: checked ? { status: 'OPEN', intervals: day.value.intervals.length ? day.value.intervals : [] } : { status: 'CLOSED', intervals: [] },
+                value: checked
+                  ? { status: 'OPEN', intervals: day.value.intervals.length ? day.value.intervals : [{ open: '', close: '' }] }
+                  : { status: 'CLOSED', intervals: [] },
               })} />
             </div>
-            {open && <>
-              {day.value.intervals.map((interval, index) => (
-                <div key={index} className="flex flex-col gap-3 rounded-xl bg-white p-4">
-                  <div className="flex items-center justify-between"><p className="text-sm font-medium">Franja {index + 1}</p>
-                    <button type="button" className="text-sm text-[#d93e3e]" onClick={() => settings.setDayDraft({
+            {open && (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-semibold">Franjas horarias</h2>
+                  <button
+                    type="button"
+                    aria-label="Agregar franja"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef0c1]"
+                    onClick={() => settings.setDayDraft({
                       day: day.day,
-                      value: { ...day.value, intervals: day.value.intervals.filter((_, i) => i !== index) },
-                    })}>Quitar</button></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><label className="text-xs">Apertura (HH:mm)</label><Input inputMode="numeric" placeholder="09:00" value={interval.open} className={field} onChange={e => {
-                      const intervals = day.value.intervals.map((item, i) => i === index ? { ...item, open: e.target.value } : item)
-                      settings.setDayDraft({ day: day.day, value: { ...day.value, intervals } })
-                    }} /></div>
-                    <div><label className="text-xs">Cierre (HH:mm o 24:00)</label><Input inputMode="numeric" placeholder="24:00" value={interval.close} className={field} onChange={e => {
-                      const intervals = day.value.intervals.map((item, i) => i === index ? { ...item, close: e.target.value } : item)
-                      settings.setDayDraft({ day: day.day, value: { ...day.value, intervals } })
-                    }} /></div>
-                  </div>
+                      value: { ...day.value, intervals: [...day.value.intervals, { open: '', close: '' }] },
+                    })}
+                  >
+                    <img src={plusIcon} alt="" width={20} height={20} />
+                  </button>
                 </div>
-              ))}
-              <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eef0c1]" aria-label="Agregar franja"
-                onClick={() => settings.setDayDraft({ day: day.day, value: { ...day.value, intervals: [...day.value.intervals, { open: '', close: '' }] } })}>
-                <img src={plusIcon} alt="" width={20} height={20} />
-              </button>
-            </>}
+                {day.value.intervals.map((interval, index) => (
+                  <div key={index} className="flex flex-col gap-2">
+                    <p className="text-sm font-medium text-[#413f46]">Franja {index + 1}</p>
+                    <div className="flex items-end gap-2">
+                      <div className="min-w-0 flex-1">
+                        <label className="text-xs text-[#605e64]">Apertura</label>
+                        <Input inputMode="numeric" placeholder="09:00" value={interval.open} className={field} onChange={e => {
+                          const intervals = day.value.intervals.map((item, i) => i === index ? { ...item, open: e.target.value } : item)
+                          settings.setDayDraft({ day: day.day, value: { ...day.value, intervals } })
+                        }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <label className="text-xs text-[#605e64]">Cierre</label>
+                        <Input inputMode="numeric" placeholder="24:00" value={interval.close} className={field} onChange={e => {
+                          const intervals = day.value.intervals.map((item, i) => i === index ? { ...item, close: e.target.value } : item)
+                          settings.setDayDraft({ day: day.day, value: { ...day.value, intervals } })
+                        }} />
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Quitar franja ${index + 1}`}
+                        className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#fdecec]"
+                        onClick={() => settings.setDayDraft({
+                          day: day.day,
+                          value: { ...day.value, intervals: day.value.intervals.filter((_, i) => i !== index) },
+                        })}
+                      >
+                        <img src={trashIcon} alt="" width={20} height={20} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <p className="text-xs text-[#605e64]">Las franjas no pueden superponerse ni cruzar medianoche</p>
+              </div>
+            )}
             {settings.errors.day && <p className="text-sm text-[#aa3030]">{settings.errors.day}</p>}
           </div>
         </main>
-        <footer className="px-4 pb-6 pt-3">
+        <footer className="px-4 pb-3 pt-2">
+          <p className="mb-2 text-center text-xs text-[#605e64]">Se aplicará al guardar la semana</p>
           <Button className="mx-auto flex h-12 w-full max-w-xl" onClick={() => settings.applyDay()}>Aplicar horario</Button>
         </footer>
+        <ClubBottomNav onDashboard={() => navigate('/app')} onClub={() => navigate('/club/settings')} busy={false} />
         <dialog ref={dayDiscard} className="w-[calc(100%-2rem)] max-w-sm rounded-xl bg-surface p-6 backdrop:bg-black/40">
           <h2 className="text-lg font-semibold">¿Descartar cambios del día?</h2>
           <div className="mt-6 flex flex-col gap-3">
@@ -117,43 +149,60 @@ export function ClubSportSettingsPage() {
         <h1 className="text-xl font-bold">Configuración de torneos</h1>
       </header>
       <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5" aria-busy={authorized && settings.loading}>
-        <div className="mx-auto flex max-w-xl flex-col gap-6">
+        <div className="mx-auto flex max-w-xl flex-col gap-8">
           {!authorized ? <p role="alert">No tenés permiso para gestionar la configuración de este club.</p>
             : settings.loading ? <p role="status">Cargando configuración…</p>
               : settings.loadError ? <Notice error title="No pudimos cargar la configuración" detail="Reintentá para consultar los defaults del club." />
                 : <>
                   {settings.result && <Notice error={settings.result === 'error'} title={settings.result === 'success' ? 'Cambios guardados' : 'No pudimos guardar los cambios'} detail={settings.result === 'error' ? 'Conservamos tu borrador.' : undefined} />}
-                  <section className="flex flex-col gap-4 rounded-xl bg-white p-4">
-                    <h2 className="text-base font-semibold">Defaults de partidos</h2>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="duration" className="text-sm font-medium">Duración estimada (min)</label>
-                      <Input id="duration" type="number" min={1} step={1} className={field} value={settings.draft.defaultMatchDurationMinutes}
-                        disabled={settings.saving} onChange={e => settings.patch({ defaultMatchDurationMinutes: Number(e.target.value) })} />
-                      {settings.errors.duration && <p className="text-sm text-[#aa3030]">{settings.errors.duration}</p>}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="rest" className="text-sm font-medium">Descanso mínimo (min)</label>
-                      <Input id="rest" type="number" min={0} step={1} className={field} value={settings.draft.defaultRestMinutes}
-                        disabled={settings.saving} onChange={e => settings.patch({ defaultRestMinutes: Number(e.target.value) })} />
-                      {settings.errors.rest && <p className="text-sm text-[#aa3030]">{settings.errors.rest}</p>}
-                      <p className="text-xs text-[#605e64]">0 es válido. Los cambios no reescriben calendarios existentes.</p>
-                    </div>
-                  </section>
                   <section className="flex flex-col gap-3">
+                    <div>
+                      <h2 className="text-base font-semibold">Parámetros del partido</h2>
+                      <p className="text-sm text-[#605e64]">Valores iniciales para nuevos torneos</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="duration" className="text-sm font-medium">Duración (min)</label>
+                        <Input id="duration" type="number" min={1} step={1} className={field} value={settings.draft.defaultMatchDurationMinutes}
+                          disabled={settings.saving} onChange={e => settings.patch({ defaultMatchDurationMinutes: Number(e.target.value) })} />
+                        <p className="text-xs text-[#605e64]">Estimada por partido</p>
+                        {settings.errors.duration && <p className="text-sm text-[#aa3030]">{settings.errors.duration}</p>}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="rest" className="text-sm font-medium">Descanso (min)</label>
+                        <Input id="rest" type="number" min={0} step={1} className={field} value={settings.draft.defaultRestMinutes}
+                          disabled={settings.saving} onChange={e => settings.patch({ defaultRestMinutes: Number(e.target.value) })} />
+                        <p className="text-xs text-[#605e64]">Mínimo entre partidos</p>
+                        {settings.errors.rest && <p className="text-sm text-[#aa3030]">{settings.errors.rest}</p>}
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#605e64]">Los torneos existentes conservan su configuración</p>
+                  </section>
+                  <section className="flex flex-col gap-1">
                     <h2 className="text-base font-semibold">Horario semanal del club</h2>
-                    {settings.draft.partialWeek && <p className="text-sm text-[#605e64]">Semana parcial: hay días sin configurar. Se puede guardar así.</p>}
-                    {WEEKDAYS.map(([key, label]) => (
-                      <button key={key} type="button" disabled={settings.saving} onClick={() => settings.openDay(key)}
-                        className="flex min-h-14 items-center justify-between rounded-xl bg-white px-4 py-3 text-left">
-                        <span className="text-sm font-medium">{label}</span>
-                        <span className="text-sm text-[#605e64]">{daySummary(settings.draft.weeklySchedule[key])}</span>
-                      </button>
-                    ))}
+                    <p className="mb-2 text-sm text-[#605e64]">{weekSummary(settings.draft.weeklySchedule, settings.draft.partialWeek)}</p>
+                    <div className="flex flex-col">
+                      {WEEKDAYS.map(([key, label], index) => (
+                        <button
+                          key={key}
+                          type="button"
+                          disabled={settings.saving}
+                          onClick={() => settings.openDay(key)}
+                          className={`flex min-h-14 items-center gap-3 py-3 text-left ${index > 0 ? 'border-t border-[#e7e7e8]' : ''}`}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium leading-5">{label}</span>
+                            <span className="block text-sm leading-5 text-[#605e64]">{daySummary(settings.draft.weeklySchedule[key])}</span>
+                          </span>
+                          <img src={chevronIcon} alt="" width={24} height={24} className="shrink-0 opacity-70" />
+                        </button>
+                      ))}
+                    </div>
                   </section>
                 </>}
         </div>
       </main>
-      {authorized && !settings.loading && <footer className="shrink-0 px-4 pb-4 pt-3">
+      {authorized && !settings.loading && <footer className="shrink-0 px-4 pb-3 pt-2">
         {settings.loadError ? <Button className="mx-auto flex h-12 w-full max-w-xl" onClick={() => void settings.reload()}>Reintentar</Button>
           : <>
             <p className="mb-2 text-center text-sm text-[#605e64]">{settings.dirty ? 'Tenés cambios sin guardar' : 'Sin cambios pendientes'}</p>

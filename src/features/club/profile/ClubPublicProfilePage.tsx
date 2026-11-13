@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { apiClient } from '@/lib/api-client'
 import { API_BASE } from '@/lib/constants'
 import { ClubBottomNav } from '../category-policy/ClubBottomNav'
-import { absoluteMedia, parsePublic, type ClubPublicProfile } from './club-profile-model'
+import { absoluteMedia, framedMediaStyle, parsePublic, type ClubPublicProfile } from './club-profile-model'
 
 export function ClubPublicProfilePage({ preview = false }: { preview?: boolean }) {
   const { clubId: routeClubId } = useParams()
@@ -51,14 +51,12 @@ export function ClubPublicProfilePage({ preview = false }: { preview?: boolean }
             : error ? <div className="space-y-3 p-4"><p role="alert">No pudimos cargar el perfil.</p><Button onClick={() => void load()}>Reintentar</Button></div>
               : profile && <>
                 {cover && <div className="overflow-hidden bg-[#e7e7e8]" style={{ aspectRatio: '370/184' }}>
-                  <img src={cover} alt="" className="h-full w-full object-cover"
-                    style={profile.coverFraming ? { transform: `translate(${profile.coverFraming.offsetX}px, ${profile.coverFraming.offsetY}px) scale(${profile.coverFraming.scale})` } : undefined} />
+                  <img src={cover} alt="" style={framedMediaStyle(profile.coverFraming, 'cover')} />
                 </div>}
                 <div className="space-y-4 px-4 py-5">
                   <div className="flex items-end gap-3">
                     {logo && <div className="h-16 w-16 overflow-hidden rounded-xl bg-[#100e16]">
-                      <img src={logo} alt="" className="h-full w-full object-cover"
-                        style={profile.logoFraming ? { transform: `translate(${profile.logoFraming.offsetX}px, ${profile.logoFraming.offsetY}px) scale(${profile.logoFraming.scale})` } : undefined} />
+                      <img src={logo} alt="" style={framedMediaStyle(profile.logoFraming, 'contain')} />
                     </div>}
                     <div>
                       <h2 className="text-xl font-bold">{profile.name}</h2>

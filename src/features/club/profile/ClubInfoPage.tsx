@@ -9,8 +9,8 @@ import editIcon from '@/assets/venues/edit.svg'
 import checkIcon from '@/assets/category-policy/check.svg'
 import errorIcon from '@/assets/category-policy/error.svg'
 import { ClubLocationFields } from './ClubLocationFields'
-import { useClubProfile } from './use-club-profile'
-import type { ImageFraming } from './club-profile-model'
+import { framedMediaStyle, framing, type ImageFraming } from './club-profile-model'
+import { useClubProfile, type UploadedMedia } from './use-club-profile'
 
 const field = 'h-14 w-full rounded-lg border border-[#929195] bg-[#fefefe] px-4 text-sm font-medium shadow-none'
 
@@ -37,7 +37,7 @@ function ImageMenu({ open, onClose, onAdd, onChange, onAdjust, onRemove, hasImag
 }) {
   if (!open) return null
   return (
-    <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-[#e7e7e8] bg-white p-1 shadow-lg" role="menu">
+    <div className="absolute right-0 z-30 mt-2 w-48 rounded-lg border border-[#e7e7e8] bg-white p-1 shadow-lg" role="menu">
       {!hasImage ? (
         <button type="button" className="block w-full rounded-md px-3 py-2 text-left text-sm" onClick={() => { onAdd(); onClose() }}>Agregar</button>
       ) : (
@@ -52,18 +52,20 @@ function ImageMenu({ open, onClose, onAdd, onChange, onAdjust, onRemove, hasImag
   )
 }
 
-function FramingEditor({ title, src, framing, aspect, onCancel, onApply }: {
+function FramingEditor({ title, src, initial, aspect, onCancel, onApply }: {
   title: string
   src: string
-  framing: ImageFraming
+  initial: ImageFraming
   aspect: 'square' | 'cover'
   onCancel: () => void
   onApply: (value: ImageFraming) => void
 }) {
-  const [scale, setScale] = useState(framing.scale)
-  const [offsetX, setOffsetX] = useState(framing.offsetX)
-  const [offsetY, setOffsetY] = useState(framing.offsetY)
+  const [scale, setScale] = useState(initial.scale)
+  const [offsetX, setOffsetX] = useState(initial.offsetX)
+  const [offsetY, setOffsetY] = useState(initial.offsetY)
+  const mode = aspect === 'square' ? 'contain' : 'cover'
   const frameClass = aspect === 'square' ? 'h-64 w-64' : 'aspect-[370/184] w-full max-w-md'
+  const preview = framedMediaStyle({ scale, offsetX, offsetY }, mode)
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#100e16] text-white">
       <header className="flex h-14 items-center gap-2 px-4">
@@ -72,7 +74,7 @@ function FramingEditor({ title, src, framing, aspect, onCancel, onApply }: {
       </header>
       <div className="flex flex-1 items-center justify-center px-4">
         <div className={`overflow-hidden bg-[#2a2730] ${frameClass}`}>
-          <img src={src} alt="" className="h-full w-full object-cover" style={{ transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})` }} />
+          <img src={src} alt="" style={preview} />
         </div>
       </div>
       <div className="space-y-3 px-4 pb-8">
@@ -80,10 +82,10 @@ function FramingEditor({ title, src, framing, aspect, onCancel, onApply }: {
           <input type="range" min={1} max={3} step={0.05} value={scale} onChange={e => setScale(Number(e.target.value))} className="mt-2 w-full" />
         </label>
         <label className="block text-sm">Horizontal
-          <input type="range" min={-80} max={80} value={offsetX} onChange={e => setOffsetX(Number(e.target.value))} className="mt-2 w-full" />
+          <input type="range" min={-50} max={50} value={offsetX} onChange={e => setOffsetX(Number(e.target.value))} className="mt-2 w-full" />
         </label>
         <label className="block text-sm">Vertical
-          <input type="range" min={-80} max={80} value={offsetY} onChange={e => setOffsetY(Number(e.target.value))} className="mt-2 w-full" />
+          <input type="range" min={-50} max={50} value={offsetY} onChange={e => setOffsetY(Number(e.target.value))} className="mt-2 w-full" />
         </label>
         <div className="flex gap-3 pt-2">
           <Button variant="secondary" className="h-12 flex-1" onClick={() => { setScale(1); setOffsetX(0); setOffsetY(0) }}>Restablecer</Button>
@@ -102,6 +104,10 @@ function EditFab({ label, className, onClick, disabled }: { label: string; class
   )
 }
 
+type FramingSession =
+  | { mode: 'adjust'; kind: 'logo' | 'cover' }
+  | { mode: 'pending'; media: UploadedMedia }
+
 export function ClubInfoPage() {
   const { user, destination, phase } = useAuth()
   const navigate = useNavigate()
@@ -117,9 +123,12 @@ export function ClubInfoPage() {
   const statusDialog = useRef<HTMLDialogElement>(null)
   const [logoMenu, setLogoMenu] = useState(false)
   const [coverMenu, setCoverMenu] = useState(false)
-  const [framingKind, setFramingKind] = useState<'logo' | 'cover' | null>(null)
+  const [framingSession, setFramingSession] = useState<FramingSession | null>(null)
   const [statusMode, setStatusMode] = useState<'deactivate' | 'reactivate' | 'blocked' | null>(null)
-  const blocker = useBlocker(phase === 'ready' && (profile.dirty || profile.saving || !!profile.uploading))
+  const blocker = useBlocker(({ nextLocation }) => {
+    if (nextLocation.pathname.includes('/club/settings/info/preview')) return false
+    return phase === 'ready' && (profile.dirty || profile.saving || !!profile.uploading)
+  })
 
   useEffect(() => {
     if (blocker.state === 'blocked' && !profile.saving && !profile.uploading) {
@@ -133,12 +142,26 @@ export function ClubInfoPage() {
   const back = () => navigate('/club/settings')
   const draft = profile.draft
   const busy = profile.saving || !!profile.uploading || profile.statusBusy
-  const coverTransform = draft
-    ? `translate(${draft.coverFraming.offsetX}px, ${draft.coverFraming.offsetY}px) scale(${draft.coverFraming.scale})`
-    : undefined
-  const logoTransform = draft
-    ? `translate(${draft.logoFraming.offsetX}px, ${draft.logoFraming.offsetY}px) scale(${draft.logoFraming.scale})`
-    : undefined
+
+  const onPick = async (kind: 'logo' | 'cover', file: File) => {
+    const uploaded = await profile.uploadMedia(kind, file)
+    if (!uploaded) return
+    setFramingSession({ mode: 'pending', media: uploaded })
+  }
+
+  const framingSrc = framingSession && draft
+    ? framingSession.mode === 'pending'
+      ? framingSession.media.url
+      : framingSession.kind === 'logo' ? draft.logoUrl : draft.coverPhotoUrl
+    : null
+  const framingInitial = framingSession && draft
+    ? framingSession.mode === 'pending'
+      ? framing()
+      : framingSession.kind === 'logo' ? draft.logoFraming : draft.coverFraming
+    : framing()
+  const framingAspect = framingSession
+    ? (framingSession.mode === 'pending' ? framingSession.media.kind : framingSession.kind) === 'logo' ? 'square' : 'cover'
+    : 'square'
 
   return (
     <div className="flex h-dvh flex-col bg-[#f7f7f7] text-[#120f18]">
@@ -167,13 +190,15 @@ export function ClubInfoPage() {
               )}
 
               <section className="relative">
-                <div className="relative overflow-hidden rounded-xl bg-[#e7e7e8]" style={{ aspectRatio: '370/184' }}>
-                  {draft.coverPhotoUrl && !draft.clearCover ? (
-                    <img src={draft.coverPhotoUrl} alt="" className="h-full w-full object-cover" style={{ transform: coverTransform }} />
-                  ) : (
-                    <div className="flex h-24 items-center justify-center text-sm text-[#605e64]">Sin portada</div>
-                  )}
-                  <div className="absolute bottom-3 right-3">
+                <div className="relative rounded-xl bg-[#e7e7e8]" style={{ aspectRatio: '370/184' }}>
+                  <div className="absolute inset-0 overflow-hidden rounded-xl">
+                    {draft.coverPhotoUrl && !draft.clearCover ? (
+                      <img src={draft.coverPhotoUrl} alt="" style={framedMediaStyle(draft.coverFraming, 'cover')} />
+                    ) : (
+                      <div className="flex h-24 items-center justify-center text-sm text-[#605e64]">Sin portada</div>
+                    )}
+                  </div>
+                  <div className="absolute bottom-3 right-3 z-20">
                     <EditFab
                       label="Editar portada"
                       disabled={busy}
@@ -185,43 +210,49 @@ export function ClubInfoPage() {
                       hasImage={Boolean(draft.coverPhotoUrl && !draft.clearCover)}
                       onAdd={() => coverInput.current?.click()}
                       onChange={() => coverInput.current?.click()}
-                      onAdjust={() => setFramingKind('cover')}
+                      onAdjust={() => setFramingSession({ mode: 'adjust', kind: 'cover' })}
                       onRemove={() => profile.patch({
                         clearCover: true, coverPhotoUrl: null, coverKey: null,
-                        coverFraming: { offsetX: 0, offsetY: 0, scale: 1 },
+                        coverFraming: framing(),
                       })}
                     />
                   </div>
                   {profile.uploading === 'cover' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-sm text-white">Subiendo portada…</div>
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 text-sm text-white">Subiendo portada…</div>
                   )}
                 </div>
 
                 <div className="relative -mt-10 flex items-end gap-3 px-1">
-                  <div className="relative h-20 w-20 overflow-hidden rounded-xl border-4 border-[#f7f7f7] bg-[#100e16]">
-                    {draft.logoUrl && !draft.clearLogo ? (
-                      <img src={draft.logoUrl} alt="" className="h-full w-full object-cover" style={{ transform: logoTransform }} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[10px] text-[#fafaeb]">Logo</div>
+                  <div className="relative h-20 w-20 shrink-0">
+                    <div className="h-20 w-20 overflow-hidden rounded-xl border-4 border-[#f7f7f7] bg-[#100e16]">
+                      {draft.logoUrl && !draft.clearLogo ? (
+                        <img src={draft.logoUrl} alt="" style={framedMediaStyle(draft.logoFraming, 'contain')} />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[10px] text-[#fafaeb]">Logo</div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 z-20">
+                      <EditFab
+                        label="Editar logo"
+                        disabled={busy}
+                        onClick={() => { setLogoMenu(v => !v); setCoverMenu(false) }}
+                      />
+                      <ImageMenu
+                        open={logoMenu}
+                        onClose={() => setLogoMenu(false)}
+                        hasImage={Boolean(draft.logoUrl && !draft.clearLogo)}
+                        onAdd={() => logoInput.current?.click()}
+                        onChange={() => logoInput.current?.click()}
+                        onAdjust={() => setFramingSession({ mode: 'adjust', kind: 'logo' })}
+                        onRemove={() => profile.patch({
+                          clearLogo: true, logoUrl: null, logoKey: null,
+                          logoFraming: framing(),
+                        })}
+                      />
+                    </div>
+                    {profile.uploading === 'logo' && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 text-[10px] text-white">…</div>
                     )}
-                    <EditFab
-                      label="Editar logo"
-                      disabled={busy}
-                      className="absolute -bottom-1 -right-1"
-                      onClick={() => { setLogoMenu(v => !v); setCoverMenu(false) }}
-                    />
-                    <ImageMenu
-                      open={logoMenu}
-                      onClose={() => setLogoMenu(false)}
-                      hasImage={Boolean(draft.logoUrl && !draft.clearLogo)}
-                      onAdd={() => logoInput.current?.click()}
-                      onChange={() => logoInput.current?.click()}
-                      onAdjust={() => setFramingKind('logo')}
-                      onRemove={() => profile.patch({
-                        clearLogo: true, logoUrl: null, logoKey: null,
-                        logoFraming: { offsetX: 0, offsetY: 0, scale: 1 },
-                      })}
-                    />
                   </div>
                   <div className="pb-1">
                     <p className="text-lg font-semibold">{draft.name || 'Club'}</p>
@@ -360,24 +391,30 @@ export function ClubInfoPage() {
       <input ref={logoInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => {
         const file = e.target.files?.[0]
         e.target.value = ''
-        if (file) void profile.upload('logo', file)
+        if (file) void onPick('logo', file)
       }} />
       <input ref={coverInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => {
         const file = e.target.files?.[0]
         e.target.value = ''
-        if (file) void profile.upload('cover', file)
+        if (file) void onPick('cover', file)
       }} />
 
-      {framingKind && draft && (framingKind === 'logo' ? draft.logoUrl : draft.coverPhotoUrl) && (
+      {framingSession && framingSrc && (
         <FramingEditor
-          title={framingKind === 'logo' ? 'Ajustar logo' : 'Ajustar portada'}
-          src={(framingKind === 'logo' ? draft.logoUrl : draft.coverPhotoUrl)!}
-          framing={framingKind === 'logo' ? draft.logoFraming : draft.coverFraming}
-          aspect={framingKind === 'logo' ? 'square' : 'cover'}
-          onCancel={() => setFramingKind(null)}
+          title={(framingSession.mode === 'pending' ? framingSession.media.kind : framingSession.kind) === 'logo' ? 'Ajustar logo' : 'Ajustar portada'}
+          src={framingSrc}
+          initial={framingInitial}
+          aspect={framingAspect}
+          onCancel={() => setFramingSession(null)}
           onApply={value => {
-            profile.patch(framingKind === 'logo' ? { logoFraming: value } : { coverFraming: value })
-            setFramingKind(null)
+            if (framingSession.mode === 'pending') {
+              profile.applyUploaded(framingSession.media, value)
+            } else if (framingSession.kind === 'logo') {
+              profile.patch({ logoFraming: value })
+            } else {
+              profile.patch({ coverFraming: value })
+            }
+            setFramingSession(null)
           }}
         />
       )}

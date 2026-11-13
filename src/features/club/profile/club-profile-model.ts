@@ -95,6 +95,42 @@ export function framing(value?: Partial<ImageFraming> | null): ImageFraming {
   }
 }
 
+/**
+ * Framing offsets are percentages of the visible frame (−50…50) so logo 64/80
+ * and cover 370×184 stay consistent with the editor preview. Logo uses contain
+ * (no automatic brand crop); cover uses cover.
+ */
+export function framedMediaStyle(value: ImageFraming | null | undefined, mode: 'contain' | 'cover') {
+  const f = framing(value)
+  return {
+    width: '100%',
+    height: '100%',
+    objectFit: mode,
+    transform: `translate(${f.offsetX}%, ${f.offsetY}%) scale(${f.scale})`,
+    transformOrigin: 'center center',
+  } as const
+}
+
+const HM = /^([01]\d|2[0-3]):([0-5]\d)$/
+
+/** Strict HH:mm; closing may be 24:00 (end of day). */
+export function parseScheduleMinutes(value: string, allowEndOfDay: boolean): number | null {
+  const trimmed = value.trim()
+  if (allowEndOfDay && trimmed === '24:00') return 24 * 60
+  if (!HM.test(trimmed)) return null
+  const hour = Number(trimmed.slice(0, 2))
+  const minute = Number(trimmed.slice(3, 5))
+  return hour * 60 + minute
+}
+
+export function validateOpenInterval(open: string, close: string): string | null {
+  const o = parseScheduleMinutes(open, false)
+  const c = parseScheduleMinutes(close, true)
+  if (o == null || c == null) return 'Usá HH:mm (cierre puede ser 24:00)'
+  if (o >= c) return 'La apertura debe ser anterior al cierre'
+  return null
+}
+
 function text(value: unknown) {
   return typeof value === 'string' ? value : value == null ? null : String(value)
 }

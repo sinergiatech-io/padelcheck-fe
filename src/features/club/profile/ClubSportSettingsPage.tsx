@@ -77,11 +77,11 @@ export function ClubSportSettingsPage() {
                       value: { ...day.value, intervals: day.value.intervals.filter((_, i) => i !== index) },
                     })}>Quitar</button></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><label className="text-xs">Apertura</label><Input type="time" value={interval.open} className={field} onChange={e => {
+                    <div><label className="text-xs">Apertura (HH:mm)</label><Input inputMode="numeric" placeholder="09:00" value={interval.open} className={field} onChange={e => {
                       const intervals = day.value.intervals.map((item, i) => i === index ? { ...item, open: e.target.value } : item)
                       settings.setDayDraft({ day: day.day, value: { ...day.value, intervals } })
                     }} /></div>
-                    <div><label className="text-xs">Cierre</label><Input type="time" value={interval.close} className={field} onChange={e => {
+                    <div><label className="text-xs">Cierre (HH:mm o 24:00)</label><Input inputMode="numeric" placeholder="24:00" value={interval.close} className={field} onChange={e => {
                       const intervals = day.value.intervals.map((item, i) => i === index ? { ...item, close: e.target.value } : item)
                       settings.setDayDraft({ day: day.day, value: { ...day.value, intervals } })
                     }} /></div>

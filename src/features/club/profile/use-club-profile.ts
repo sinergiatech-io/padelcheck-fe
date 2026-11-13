@@ -27,6 +27,12 @@ export type ProfileDraft = {
   locationDirty: boolean
 }
 
+export type UploadedMedia = { kind: 'logo' | 'cover'; mediaKey: string; url: string }
+
+function draftKey(clubId: string) {
+  return `kan109-club-info-draft:${clubId}`
+}
+
 function draftFrom(profile: ClubProfile): ProfileDraft {
   return {
     name: profile.name,
@@ -55,6 +61,28 @@ function same(a: ProfileDraft, b: ProfileDraft) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+function readStoredDraft(clubId: string): ProfileDraft | null {
+  try {
+    const raw = sessionStorage.getItem(draftKey(clubId))
+    if (!raw) return null
+    return JSON.parse(raw) as ProfileDraft
+  } catch {
+    return null
+  }
+}
+
+function writeStoredDraft(clubId: string, draft: ProfileDraft | null, baseline: ProfileDraft | null) {
+  try {
+    if (!draft || !baseline || same(draft, baseline)) {
+      sessionStorage.removeItem(draftKey(clubId))
+      return
+    }
+    sessionStorage.setItem(draftKey(clubId), JSON.stringify(draft))
+  } catch {
+    /* ignore quota */
+  }
+}
+
 export function useClubProfile(clubId: string | null) {
   const [saved, setSaved] = useState<ClubProfile | null>(null)
   const [draft, setDraft] = useState<ProfileDraft | null>(null)
@@ -81,9 +109,10 @@ export function useClubProfile(clubId: string | null) {
       if (id !== flight.current) return
       const profile = parseProfile(value)
       const next = draftFrom(profile)
+      const stored = readStoredDraft(clubId)
       setSaved(profile)
-      setDraft(next)
       setBaseline(next)
+      setDraft(stored && !same(stored, next) ? stored : next)
       loadedFor.current = clubId
       setFieldErrors({})
     } catch {
@@ -104,6 +133,10 @@ export function useClubProfile(clubId: string | null) {
 
   const dirty = Boolean(draft && baseline && !same(draft, baseline))
 
+  useEffect(() => {
+    if (clubId && draft && baseline) writeStoredDraft(clubId, draft, baseline)
+  }, [clubId, draft, baseline])
+
   const patch = useCallback((partial: Partial<ProfileDraft>) => {
     setDraft(current => current ? { ...current, ...partial } : current)
     setResult(null)
@@ -111,11 +144,12 @@ export function useClubProfile(clubId: string | null) {
   }, [])
 
   const discard = useCallback(() => {
-    if (!baseline) return
+    if (!baseline || !clubId) return
     setDraft(baseline)
+    sessionStorage.removeItem(draftKey(clubId))
     setFieldErrors({})
     setResult(null)
-  }, [baseline])
+  }, [baseline, clubId])
 
   const validate = useCallback((value: ProfileDraft) => {
     const errors: Record<string, string> = {}
@@ -153,9 +187,7 @@ export function useClubProfile(clubId: string | null) {
       if (draft.clearLogo) body.clearLogo = true
       else if (draft.logoKey && draft.logoKey !== mediaKeyFromUrl(saved?.logoUrl)) body.logoUrl = draft.logoKey
       if (draft.clearCover) body.clearCover = true
-      else if (draft.coverKey && draft.coverKey !== mediaKeyFromUrl(saved?.coverPhotoUrl)) body.coverUrl = draft.coverKey
-      // API expects coverPhotoUrl
-      if (body.coverUrl) { body.coverPhotoUrl = body.coverUrl; delete body.coverUrl }
+      else if (draft.coverKey && draft.coverKey !== mediaKeyFromUrl(saved?.coverPhotoUrl)) body.coverPhotoUrl = draft.coverKey
       if (draft.provinceId && draft.localityId && (draft.locationDirty || !saved?.location)) {
         body.location = { countryCode: 'AR', provinceId: draft.provinceId, localityId: draft.localityId }
       }
@@ -165,6 +197,7 @@ export function useClubProfile(clubId: string | null) {
       setSaved(profile)
       setDraft(next)
       setBaseline(next)
+      sessionStorage.removeItem(draftKey(clubId))
       setResult('success')
     } catch {
       setResult('error')
@@ -173,15 +206,16 @@ export function useClubProfile(clubId: string | null) {
     }
   }, [clubId, draft, saving, uploading, validate, saved])
 
-  const upload = useCallback(async (kind: 'logo' | 'cover', file: File) => {
-    if (!clubId || uploading || saving) return
+  /** Upload only; caller applies framing then commits to draft (cancel keeps previous image). */
+  const uploadMedia = useCallback(async (kind: 'logo' | 'cover', file: File): Promise<UploadedMedia | null> => {
+    if (!clubId || uploading || saving) return null
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
       setFieldErrors(current => ({ ...current, [kind]: 'Usá PNG, JPEG o WebP' }))
-      return
+      return null
     }
     if (file.size > 5 * 1024 * 1024) {
       setFieldErrors(current => ({ ...current, [kind]: 'La imagen supera 5 MB' }))
-      return
+      return null
     }
     setUploading(kind)
     setFieldErrors(current => { const next = { ...current }; delete next[kind]; return next })
@@ -191,17 +225,22 @@ export function useClubProfile(clubId: string | null) {
       const value = await apiClient.postForm<{ mediaKey: string; url: string }>(
         `/clubs/${encodeURIComponent(clubId)}/media/${kind}`, form, { timeoutMs: 30000 })
       const preview = absoluteMedia(value.url, API_BASE) ?? value.url
-      if (kind === 'logo') {
-        patch({ logoUrl: preview, logoKey: value.mediaKey, clearLogo: false, logoFraming: framing() })
-      } else {
-        patch({ coverPhotoUrl: preview, coverKey: value.mediaKey, clearCover: false, coverFraming: framing() })
-      }
+      return { kind, mediaKey: value.mediaKey, url: preview }
     } catch {
       setFieldErrors(current => ({ ...current, [kind]: 'No pudimos subir la imagen. Probá de nuevo.' }))
+      return null
     } finally {
       setUploading(null)
     }
-  }, [clubId, uploading, saving, patch])
+  }, [clubId, uploading, saving])
+
+  const applyUploaded = useCallback((media: UploadedMedia, nextFraming: ImageFraming) => {
+    if (media.kind === 'logo') {
+      patch({ logoUrl: media.url, logoKey: media.mediaKey, clearLogo: false, logoFraming: nextFraming })
+    } else {
+      patch({ coverPhotoUrl: media.url, coverKey: media.mediaKey, clearCover: false, coverFraming: nextFraming })
+    }
+  }, [patch])
 
   const setLocation = useCallback((location: Pick<LocationDto, 'provinceId' | 'provinceName' | 'localityId' | 'localityName'> | null) => {
     if (!location) {
@@ -228,6 +267,7 @@ export function useClubProfile(clubId: string | null) {
       setSaved(profile)
       setDraft(next)
       setBaseline(next)
+      sessionStorage.removeItem(draftKey(clubId))
       return true
     } catch (error) {
       const message = error instanceof ApiError && error.message === 'CLUB_HAS_ACTIVE_EVENTS'
@@ -251,6 +291,7 @@ export function useClubProfile(clubId: string | null) {
       setSaved(profile)
       setDraft(next)
       setBaseline(next)
+      sessionStorage.removeItem(draftKey(clubId))
       return true
     } catch {
       setActionError('error')
@@ -263,7 +304,7 @@ export function useClubProfile(clubId: string | null) {
   return useMemo(() => ({
     saved, draft, loading: loading || (!!clubId && loadedFor.current !== clubId), saving, uploading,
     loadError, result, fieldErrors, dirty, actionError, statusBusy,
-    reload, patch, discard, save, upload, setLocation, deactivate, reactivate, setActionError, setFieldErrors,
+    reload, patch, discard, save, uploadMedia, applyUploaded, setLocation, deactivate, reactivate, setActionError, setFieldErrors,
   }), [saved, draft, loading, clubId, saving, uploading, loadError, result, fieldErrors, dirty, actionError, statusBusy,
-    reload, patch, discard, save, upload, setLocation, deactivate, reactivate])
+    reload, patch, discard, save, uploadMedia, applyUploaded, setLocation, deactivate, reactivate])
 }

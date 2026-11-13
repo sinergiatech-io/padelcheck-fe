@@ -66,6 +66,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             </NavLink>
           </div>
         ) : null}
+        {destination?.kind === 'club' && <NavLink to="/club/settings" className={navLinkClass} onClick={() => onNavigate?.()}><Settings className="h-5 w-5 shrink-0" />Mi Club</NavLink>}
       </nav>
     </>
   )

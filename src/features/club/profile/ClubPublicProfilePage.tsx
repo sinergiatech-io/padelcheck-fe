@@ -8,6 +8,7 @@ import { API_BASE } from '@/lib/constants'
 import { AppBottomNav } from '@/features/app/layout/components/AppBottomNav'
 import { ClubBottomNav } from '../category-policy/ClubBottomNav'
 import { absoluteMedia, framedMediaStyle, parsePublic, type ClubPublicProfile } from './club-profile-model'
+import infoIcon from '@/assets/venues/info.svg'
 
 function whatsappHref(phone: string) {
   const digits = phone.replace(/\D/g, '')
@@ -49,15 +50,20 @@ export function ClubPublicProfilePage({ preview = false }: { preview?: boolean }
   const hasContact = Boolean(profile?.contactPhone || profile?.contactEmail)
   const hasSocial = Boolean(profile?.instagramUrl || profile?.facebookUrl)
   const wa = profile?.contactPhone ? whatsappHref(profile.contactPhone) : null
+  const locationLabel = [...new Set([profile?.city, profile?.countryDivision].filter(Boolean))].join(', ')
 
   return (
     <div className="flex h-dvh flex-col bg-[#f7f7f7] text-[#120f18]">
       <header className="flex h-14 shrink-0 items-center bg-[#100e16] px-4 text-white">
         <button type="button" aria-label="Volver" className="flex h-10 w-10 items-center justify-center" onClick={back}><ArrowBackIcon /></button>
-        <h1 className="text-xl font-bold">{preview ? 'Vista previa pública' : 'Perfil del club'}</h1>
+        <h1 className="text-xl font-bold">{preview ? 'Vista previa del club' : 'Perfil del club'}</h1>
       </header>
       <main className={`min-h-0 flex-1 overflow-y-auto ${(preview || playerShell) ? 'pb-20' : ''}`}>
         <div className="mx-auto max-w-xl px-4 py-5">
+          {preview && <div role="status" className="mb-6 flex min-h-[78px] items-center gap-3 rounded-lg border border-[#c2d8fc] bg-[#ebf3fe] p-3">
+            <img src={infoIcon} alt="" className="h-6 w-6 shrink-0" />
+            <div><p className="text-sm font-semibold">Vista previa</p><p className="text-xs text-[#605e64]">Mostramos los datos guardados.</p></div>
+          </div>}
           {loading ? <p role="status">Cargando perfil…</p>
             : error ? <div className="space-y-3"><p role="alert">No pudimos cargar el perfil.</p><Button onClick={() => void load()}>Reintentar</Button></div>
               : profile && (
@@ -73,13 +79,11 @@ export function ClubPublicProfilePage({ preview = false }: { preview?: boolean }
                         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#100e16]">
                           <img src={logo} alt="" style={framedMediaStyle(profile.logoFraming, 'contain')} />
                         </div>
-                      ) : (
-                        <div className="h-16 w-16 shrink-0 rounded-xl bg-[#e7e7e8]" aria-hidden />
-                      )}
+                      ) : null}
                       <div className="min-w-0">
                         <h2 className="truncate text-xl font-bold leading-7">{profile.name}</h2>
-                        {(profile.city || profile.countryDivision) && (
-                          <p className="text-sm text-[#605e64]">{[profile.city, profile.countryDivision].filter(Boolean).join(', ')}</p>
+                        {locationLabel && (
+                          <p className="text-sm text-[#605e64]">{locationLabel}</p>
                         )}
                       </div>
                     </div>

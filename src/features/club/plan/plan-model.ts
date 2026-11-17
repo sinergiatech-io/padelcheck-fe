@@ -5,7 +5,10 @@ export type MeterTone = 'plain' | 'warning' | 'limit' | 'excess' | 'unlimited' |
 export type ChargeOutcome = 'confirmed' | 'manual' | 'unconfirmed' | 'failed' | 'canceled' | 'unknown'
 export type PlanAction = 'retry' | 'complete-payment' | 'resume' | 'authorize' | 'adjust' | 'upgrade' | 'check-payment'
 export type CheckoutPlanCode = 'PRO' | 'ELITE'
-export type ConflictOutcome = 'confirmed' | 'manual' | 'unconfirmed' | 'failed' | 'canceled' | 'already-resumed' | 'still-open'
+export type ConflictOutcome = 'confirmed' | 'manual' | 'unconfirmed' | 'failed' | 'canceled' | 'already-resumed' | 'authorization' | 'still-open'
+export type PaymentRoute = 'adjustment' | 'checkout' | 'none'
+export type ChargeOpenVerdict = 'open' | 'review' | 'confirmed' | 'manual' | 'failed' | 'canceled' | 'uncertain' | 'expired' | 'withhold'
+export type CheckoutOpenDecision = 'open' | 'review' | 'reject'
 
 export interface UsageMeter {
   key: string
@@ -180,6 +183,13 @@ export interface KeyValueStore {
   getItem(key: string): string | null
   setItem(key: string, value: string): void
   removeItem(key: string): void
+  keys?: () => string[]
+}
+
+export interface BillingScope {
+  userId: string
+  session: number
+  clubId: string
 }
 
 export interface PlanActionInput {
@@ -244,18 +254,18 @@ export function providerUrl(value: unknown): string | null {
   return url.toString()
 }
 
-export function chargeStorageKey(clubId: string): string {
-  return `padelcheck.plan.charge.${clubId}`
+export function chargeStorageKey(scope: BillingScope): string {
+  return `padelcheck.plan.charge.${scopeToken(scope.userId)}.${scope.session}.${scope.clubId}`
 }
 
-export function rememberCharge(store: KeyValueStore, clubId: string, reference: string): void {
+export function rememberCharge(store: KeyValueStore, scope: BillingScope, reference: string): void {
   const safe = opaqueReference(reference)
-  if (!safe) return
-  store.setItem(chargeStorageKey(clubId), safe)
+  if (!safe || !scope.userId || !scope.clubId || !Number.isInteger(scope.session)) return
+  store.setItem(chargeStorageKey(scope), safe)
 }
 
-export function recallCharge(store: KeyValueStore, clubId: string): string | null {
-  const key = chargeStorageKey(clubId)
+export function recallCharge(store: KeyValueStore, scope: BillingScope): string | null {
+  const key = chargeStorageKey(scope)
   const safe = opaqueReference(store.getItem(key))
   if (!safe) {
     store.removeItem(key)
@@ -264,16 +274,80 @@ export function recallCharge(store: KeyValueStore, clubId: string): string | nul
   return safe
 }
 
-export function forgetCharge(store: KeyValueStore, clubId: string): void {
-  store.removeItem(chargeStorageKey(clubId))
+export function forgetCharge(store: KeyValueStore, scope: BillingScope): void {
+  store.removeItem(chargeStorageKey(scope))
+}
+
+export function forgetPlanCharges(store: KeyValueStore): void {
+  for (const key of store.keys?.() ?? []) {
+    if (key.startsWith('padelcheck.plan.charge.')) store.removeItem(key)
+  }
+}
+
+export function continuationAllowed(started: number, current: number): boolean {
+  return started === current
+}
+
+export async function settleAfterPost<T>(input: {
+  started: number
+  current: () => number
+  post: () => Promise<T>
+  apply: (value: T) => void
+}): Promise<'applied' | 'stale'> {
+  const value = await input.post()
+  if (!continuationAllowed(input.started, input.current())) return 'stale'
+  input.apply(value)
+  return 'applied'
+}
+
+export async function loadIfCurrent<T>(input: {
+  started: number
+  current: () => number
+  load: () => Promise<T>
+}): Promise<T | 'stale'> {
+  const value = await input.load()
+  if (!continuationAllowed(input.started, input.current())) return 'stale'
+  return value
 }
 
 export function checkoutPlanCode(value: unknown): CheckoutPlanCode | null {
   return value === 'PRO' || value === 'ELITE' ? value : null
 }
 
+export function monthlyPriceReady(price: PlanPrice | null): boolean {
+  if (!price || price.status !== 'AVAILABLE' || price.period !== 'MONTH') return false
+  if (!price.amount || !price.currency || !/^[A-Z]{3}$/.test(price.currency)) return false
+  const amount = Number(price.amount)
+  return Number.isFinite(amount) && amount > 0
+}
+
 export function eligibleCheckoutPlans(offers: PlanOffer[]): PlanOffer[] {
-  return offers.filter((offer) => offer.code === 'PRO' || offer.code === 'ELITE')
+  return offers.filter((offer) => checkoutPlanCode(offer.code) != null && monthlyPriceReady(offer.price))
+}
+
+export function unavailableCheckoutPlans(offers: PlanOffer[]): PlanOffer[] {
+  return offers.filter((offer) => checkoutPlanCode(offer.code) != null && !monthlyPriceReady(offer.price))
+}
+
+export function paymentRoute(input: {
+  requestedPlanCode: string | null
+  requestAdjustmentQuote: boolean
+  fullCheckout: boolean
+}): PaymentRoute {
+  if (!checkoutPlanCode(input.requestedPlanCode)) return 'none'
+  if (input.requestAdjustmentQuote) return 'adjustment'
+  if (input.fullCheckout) return 'checkout'
+  return 'none'
+}
+
+export async function dispatchCompletePayment(route: PaymentRoute, effects: {
+  startAdjustment: () => Promise<void>
+  startCheckout: () => Promise<void>
+  explainBlocked: () => void
+}): Promise<void> {
+  if (route === 'adjustment') return effects.startAdjustment()
+  if (route === 'checkout') return effects.startCheckout()
+  effects.explainBlocked()
 }
 
 export function planActions(input: PlanActionInput): { primary: PlanAction | null; secondary: PlanAction[] } {
@@ -281,9 +355,13 @@ export function planActions(input: PlanActionInput): { primary: PlanAction | nul
   if (input.failed) return { primary: 'retry', secondary: [] }
   const available: PlanAction[] = []
   const requested = checkoutPlanCode(input.requestedPlanCode)
-  if (input.canManage && requested) available.push('complete-payment')
+  if (input.canManage && paymentRoute({
+    requestedPlanCode: input.requestedPlanCode,
+    requestAdjustmentQuote: input.requestAdjustmentQuote,
+    fullCheckout: input.fullCheckout,
+  }) !== 'none') available.push('complete-payment')
   if (input.canManage && !requested && input.resumeAction === 'RESUME_RENEWAL') available.push('resume')
-  if (input.canManage && !requested && input.resumeAction === 'AUTHORIZE_RENEWAL' && providerUrl(input.authorizationUrl)) {
+  if (input.canManage && input.resumeAction === 'AUTHORIZE_RENEWAL' && providerUrl(input.authorizationUrl)) {
     available.push('authorize')
   }
   if (input.canManage && !requested && input.requestAdjustmentQuote) available.push('adjust')
@@ -319,9 +397,18 @@ export function interpretConflict(input: {
   charge: Pick<BillingCharge, 'status' | 'confirmed' | 'manualResolution'> | null
   resumeAction: string | null
   recurrencePaused: boolean | null
+  subscriptionRead?: boolean
 }): { outcome: ConflictOutcome; allowAnotherPost: boolean } {
-  if (input.intent === 'resume' && input.resumeAction !== 'RESUME_RENEWAL' && input.recurrencePaused === false) {
-    return { outcome: 'already-resumed', allowAnotherPost: false }
+  if (input.intent === 'resume') {
+    if (input.subscriptionRead !== true) return { outcome: 'still-open', allowAnotherPost: false }
+    if (input.resumeAction === 'AUTHORIZE_RENEWAL') return { outcome: 'authorization', allowAnotherPost: false }
+    if (input.resumeAction === 'RESUME_RENEWAL' || input.recurrencePaused === true) {
+      return { outcome: 'still-open', allowAnotherPost: false }
+    }
+    if (input.recurrencePaused === false && input.resumeAction == null) {
+      return { outcome: 'already-resumed', allowAnotherPost: false }
+    }
+    return { outcome: 'still-open', allowAnotherPost: false }
   }
   const reading = chargeReading(input.charge)
   if (reading === 'confirmed') return { outcome: 'confirmed', allowAnotherPost: false }
@@ -467,10 +554,47 @@ export function sameSnapshot(left: ShownTerms, right: ShownTerms): boolean {
     && sameText(left.eliteMonthlyCurrency, right.eliteMonthlyCurrency)
 }
 
-export function adjustmentOpenDecision(shown: ShownTerms, terms: ChargeTerms | null, url: string | null): 'open' | 'review' | 'withhold' {
+export function adjustmentOpenDecision(shown: ShownTerms, terms: ChargeTerms | null, url: string | null, now = Number.NaN): 'open' | 'review' | 'withhold' {
   if (!terms) return 'withhold'
+  if (terms.payUntil && !quoteStillValid(terms.payUntil, now)) return 'withhold'
   if (!sameSnapshot(shown, termsSnapshot(terms))) return 'review'
   return providerUrl(url) ? 'open' : 'withhold'
+}
+
+export function checkoutOpenDecision(consent: {
+  clubId: string
+  planCode: string
+  amount: string | null
+  currency: string | null
+}, link: CheckoutLink): CheckoutOpenDecision {
+  if (link.clubId !== consent.clubId || link.planCode !== consent.planCode) return 'reject'
+  if (!link.amount || !link.currency || !providerUrl(link.url)) return 'reject'
+  if (!moneyEqual(consent.amount, link.amount) || !sameText(consent.currency, link.currency)) return 'review'
+  return 'open'
+}
+
+export function chargeOpenVerdict(input: {
+  expectedReference: string
+  expectedPlanCode: string | null
+  shown: ShownTerms | null
+  charge: BillingCharge | null
+  url: string | null
+  now: number
+}): ChargeOpenVerdict {
+  if (!input.charge || input.charge.reference !== input.expectedReference) return 'withhold'
+  if (input.expectedPlanCode && input.charge.planCode !== input.expectedPlanCode) return 'withhold'
+  const reading = chargeReading(input.charge)
+  if (reading === 'confirmed') return 'confirmed'
+  if (reading === 'manual') return 'manual'
+  if (reading === 'failed') return 'failed'
+  if (reading === 'canceled') return 'canceled'
+  if (input.charge.status === 'UNCERTAIN' || reading === 'unknown') return reading === 'unknown' ? 'withhold' : 'uncertain'
+  const payUntil = input.charge.terms?.payUntil ?? null
+  if (payUntil && !quoteStillValid(payUntil, input.now)) return 'expired'
+  if (input.charge.terms) {
+    if (!input.shown || !sameSnapshot(input.shown, termsSnapshot(input.charge.terms))) return 'review'
+  }
+  return providerUrl(input.url) ? 'open' : 'withhold'
 }
 
 export function resumePreviewCanConfirm(preview: ResumePreview): boolean {
@@ -480,9 +604,15 @@ export function resumePreviewCanConfirm(preview: ResumePreview): boolean {
 }
 
 export function resumeResult(preview: ResumePreview): 'resumed' | 'authorization' | 'unconfirmed' | 'blocked-url' {
-  if (preview.resumed) return 'resumed'
+  if (preview.resumed) {
+    return preview.sameRecurrence === true && preview.chargesCurrentPeriod === false ? 'resumed' : 'unconfirmed'
+  }
   if (preview.payerAuthorizationUrl) return providerUrl(preview.payerAuthorizationUrl) ? 'authorization' : 'blocked-url'
   return 'unconfirmed'
+}
+
+function scopeToken(value: string): string {
+  return value.replace(/[^A-Za-z0-9_-]/g, '')
 }
 
 function moneyEqual(left: string | null, right: string | null): boolean {

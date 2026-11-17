@@ -98,10 +98,24 @@ test('a conflict uses the later read and ignores the english explanation', () =>
     charge: null,
     resumeAction: null,
     recurrencePaused: false,
+    subscriptionRead: true,
     message: 'The renewal is already active',
   })
   assert.equal(resumed.outcome, 'already-resumed')
   assert.equal(resumed.allowAnotherPost, false)
+  const authorize = model.interpretConflict({
+    intent: 'resume', charge: null, resumeAction: 'AUTHORIZE_RENEWAL', recurrencePaused: false, subscriptionRead: true,
+  })
+  assert.equal(authorize.outcome, 'authorization')
+  assert.equal(authorize.allowAnotherPost, false)
+  const paused = model.interpretConflict({
+    intent: 'resume', charge: null, resumeAction: null, recurrencePaused: true, subscriptionRead: true,
+  })
+  assert.equal(paused.outcome, 'still-open')
+  const unread = model.interpretConflict({
+    intent: 'resume', charge: null, resumeAction: null, recurrencePaused: false, subscriptionRead: false,
+  })
+  assert.equal(unread.outcome, 'still-open')
 
   const opaque = model.interpretConflict({
     intent: 'adjustment', charge: null, resumeAction: 'RESUME_RENEWAL', recurrencePaused: true,
@@ -110,17 +124,19 @@ test('a conflict uses the later read and ignores the english explanation', () =>
   assert.equal(opaque.allowAnotherPost, false)
 })
 
-test('checkout accepts only a paid plan code and keeps the catalog inside the panel', () => {
+test('checkout accepts only a published monthly price and keeps the catalog inside the panel', () => {
   assert.equal(model.checkoutPlanCode('PRO'), 'PRO')
   assert.equal(model.checkoutPlanCode('ELITE'), 'ELITE')
   assert.equal(model.checkoutPlanCode('FREE'), null)
   assert.equal(model.checkoutPlanCode('NOT_A_PLAN'), null)
   const offers = model.parseOffers([
     { ...offer('FREE'), free: true },
-    { ...offer('PRO'), free: false, price: { status: 'AVAILABLE', amount: '100.00', currency: 'ARS', period: 'MONTHLY' } },
-    { ...offer('ELITE'), free: false },
+    { ...offer('PRO'), free: false, price: { status: 'AVAILABLE', amount: '100.00', currency: 'ARS', period: 'MONTH' } },
+    { ...offer('ELITE'), free: false, price: { status: 'PENDING', amount: null, currency: null, period: null } },
+    { ...offer('ELITE'), code: 'ELITE', free: false, price: { status: 'AVAILABLE', amount: '200.00', currency: 'ARS', period: 'YEAR' } },
   ])
-  assert.deepEqual(model.eligibleCheckoutPlans(offers).map((item) => item.code), ['PRO', 'ELITE'])
+  assert.deepEqual(model.eligibleCheckoutPlans(offers).map((item) => item.code), ['PRO'])
+  assert.deepEqual(model.unavailableCheckoutPlans(offers).map((item) => item.price.period), [null, 'YEAR'])
 })
 
 test('provider links stay on the payment host and never carry a token', () => {
@@ -143,11 +159,13 @@ test('an adjustment opens only after the linked snapshot matches what was accept
     reference: 'quote-1', amount: '5000.00', currency: 'ARS', periodStart: '2026-11-01', periodEnd: '2026-12-01',
     payUntil: '2026-11-20T18:00:00Z', eliteMonthlyAmount: '20000.00', eliteMonthlyCurrency: 'ARS', status: 'CHECKOUT',
   }
-  assert.equal(model.adjustmentOpenDecision(shown, changed, 'https://billing.test/checkout/pc1'), 'review')
+  const now = Date.parse('2026-11-17T12:00:00Z')
+  assert.equal(model.adjustmentOpenDecision(shown, changed, 'https://billing.test/checkout/pc1', now), 'review')
   const accepted = model.termsSnapshot(changed)
-  assert.equal(model.adjustmentOpenDecision(accepted, changed, 'https://billing.test/checkout/pc1'), 'open')
-  assert.equal(model.adjustmentOpenDecision(accepted, changed, 'https://evil.test/pay'), 'withhold')
-  assert.equal(model.adjustmentOpenDecision(accepted, null, 'https://billing.test/checkout/pc1'), 'withhold')
+  assert.equal(model.adjustmentOpenDecision(accepted, changed, 'https://billing.test/checkout/pc1', now), 'open')
+  assert.equal(model.adjustmentOpenDecision(accepted, changed, 'https://evil.test/pay', now), 'withhold')
+  assert.equal(model.adjustmentOpenDecision(accepted, null, 'https://billing.test/checkout/pc1', now), 'withhold')
+  assert.equal(model.adjustmentOpenDecision(accepted, changed, 'https://billing.test/checkout/pc1', Date.parse('2026-11-21T00:00:00Z')), 'withhold')
   assert.equal(model.sameSnapshot(shown, { ...shown, amount: '5000.0' }), true)
 })
 
@@ -156,6 +174,8 @@ test('resume confirms the same recurrence and separates an authorization link fr
   assert.equal(model.resumePreviewCanConfirm(preview), true)
   assert.equal(model.resumePreviewCanConfirm({ ...preview, chargesCurrentPeriod: true }), false)
   assert.equal(model.resumeResult({ ...preview, resumed: true }), 'resumed')
+  assert.equal(model.resumeResult({ ...preview, resumed: true, chargesCurrentPeriod: true }), 'unconfirmed')
+  assert.equal(model.resumeResult({ ...preview, resumed: true, sameRecurrence: false }), 'unconfirmed')
   assert.equal(model.resumeResult({ ...preview, payerAuthorizationUrl: 'https://www.mercadopago.com/authorize' }), 'authorization')
   assert.equal(model.resumeResult(preview), 'unconfirmed')
   assert.equal(model.resumeResult({ ...preview, payerAuthorizationUrl: 'http://billing.test/authorize' }), 'blocked-url')
@@ -205,11 +225,16 @@ test('late reads and repeated posts stay inside one club, event and session', as
 
 test('returning to the panel can recheck a stored reference without polling or posting', () => {
   const store = memory()
-  model.rememberCharge(store, 'club-a', 'pc123')
-  assert.equal(model.recallCharge(store, 'club-a'), 'pc123')
-  assert.equal(model.recallCharge(store, 'club-b'), null)
-  model.rememberCharge(store, 'club-a', 'aaa.bbb.ccc')
-  assert.equal(model.recallCharge(store, 'club-a'), 'pc123')
+  const scope = { userId: 'user-a', session: 2, clubId: 'club-a' }
+  model.rememberCharge(store, scope, 'pc123')
+  assert.equal(model.recallCharge(store, scope), 'pc123')
+  assert.equal(model.recallCharge(store, { ...scope, clubId: 'club-b' }), null)
+  assert.equal(model.recallCharge(store, { ...scope, userId: 'user-b' }), null)
+  assert.equal(model.recallCharge(store, { ...scope, session: 3 }), null)
+  model.rememberCharge(store, scope, 'aaa.bbb.ccc')
+  assert.equal(model.recallCharge(store, scope), 'pc123')
+  model.forgetPlanCharges(store)
+  assert.equal(model.recallCharge(store, scope), null)
   assert.equal(model.focusRecheckAllowed({ hasReference: true, postInFlight: false, lastRecheckAt: 0, now: 2000 }), true)
   assert.equal(model.focusRecheckAllowed({ hasReference: true, postInFlight: false, lastRecheckAt: 1000, now: 2000 }), false)
   assert.equal(model.focusRecheckAllowed({ hasReference: true, postInFlight: true, lastRecheckAt: 0, now: 5000 }), false)
@@ -252,5 +277,84 @@ function memory() {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => values.set(key, value),
     removeItem: (key) => values.delete(key),
+    keys: () => [...values.keys()],
   }
 }
+
+test('completing a pending elite request quotes the adjustment instead of a full checkout', async () => {
+  const route = model.paymentRoute({ requestedPlanCode: 'ELITE', requestAdjustmentQuote: true, fullCheckout: false })
+  assert.equal(route, 'adjustment')
+  assert.equal(model.paymentRoute({ requestedPlanCode: 'PRO', requestAdjustmentQuote: false, fullCheckout: true }), 'checkout')
+  assert.equal(model.paymentRoute({ requestedPlanCode: 'ELITE', requestAdjustmentQuote: false, fullCheckout: false }), 'none')
+  const calls = []
+  await model.dispatchCompletePayment(route, {
+    startAdjustment: async () => { calls.push('adjustment') },
+    startCheckout: async () => { calls.push('checkout') },
+    explainBlocked: () => { calls.push('blocked') },
+  })
+  assert.deepEqual(calls, ['adjustment'])
+  await model.dispatchCompletePayment('none', {
+    startAdjustment: async () => { calls.push('adjustment') },
+    startCheckout: async () => { calls.push('checkout') },
+    explainBlocked: () => { calls.push('blocked') },
+  })
+  assert.deepEqual(calls, ['adjustment', 'blocked'])
+})
+
+test('a checkout response is opened only when it matches the consented club, plan and price', () => {
+  const consent = { clubId: 'club-a', planCode: 'PRO', amount: '100.00', currency: 'ARS' }
+  const link = { clubId: 'club-a', planCode: 'PRO', amount: '100.00', currency: 'ARS', url: 'https://billing.test/checkout/pc1', reference: 'pc1' }
+  assert.equal(model.checkoutOpenDecision(consent, link), 'open')
+  assert.equal(model.checkoutOpenDecision(consent, { ...link, clubId: 'club-b' }), 'reject')
+  assert.equal(model.checkoutOpenDecision(consent, { ...link, planCode: 'ELITE' }), 'reject')
+  assert.equal(model.checkoutOpenDecision(consent, { ...link, amount: '120.00' }), 'review')
+})
+
+test('opening a reviewed charge rereads status, plan and expiry instead of trusting the local copy', () => {
+  const now = Date.parse('2026-11-17T12:00:00Z')
+  const shown = { amount: '10.00', currency: 'ARS', periodStart: null, periodEnd: '2026-12-01', payUntil: '2026-11-20T18:00:00Z', eliteMonthlyAmount: '20.00', eliteMonthlyCurrency: 'ARS' }
+  const charge = (status, extra = {}) => ({
+    reference: 'pc1', kind: 'ADJUSTMENT', planCode: 'ELITE', status, amount: '10.00', currency: 'ARS',
+    periodStart: null, periodEnd: '2026-12-01', confirmed: status === 'APPLIED', manualResolution: status === 'UNAPPLIED',
+    terms: { reference: 'q1', amount: '10.00', currency: 'ARS', periodStart: null, periodEnd: '2026-12-01', payUntil: '2026-11-20T18:00:00Z', eliteMonthlyAmount: '20.00', eliteMonthlyCurrency: 'ARS', status: 'CHECKOUT', ...extra },
+  })
+  const verdict = (value, url = 'https://billing.test/checkout/pc1') => model.chargeOpenVerdict({
+    expectedReference: 'pc1', expectedPlanCode: 'ELITE', shown, charge: value, url, now,
+  })
+  assert.equal(verdict(charge('OPEN')), 'open')
+  assert.equal(verdict(charge('OPEN', { payUntil: '2026-11-16T00:00:00Z' })), 'expired')
+  assert.equal(verdict(charge('OPEN', { amount: '11.00' })), 'review')
+  assert.equal(verdict(charge('APPLIED')), 'confirmed')
+  assert.equal(verdict(charge('UNAPPLIED')), 'manual')
+  assert.equal(verdict(charge('FAILED')), 'failed')
+  assert.equal(verdict(charge('CANCELED')), 'canceled')
+  assert.equal(verdict(charge('UNCERTAIN')), 'uncertain')
+  assert.equal(verdict(null), 'withhold')
+  assert.equal(verdict(charge('OPEN'), 'https://evil.test/pay'), 'withhold')
+})
+
+test('a late checkout url and a late event list do not land on the next club', async () => {
+  let generation = 1
+  let opened = 0
+  const posted = model.settleAfterPost({
+    started: 1,
+    current: () => generation,
+    post: () => new Promise((resolve) => setTimeout(() => resolve({ url: 'https://billing.test/checkout/pc1' }), 20)),
+    apply: () => { opened += 1 },
+  })
+  generation = 2
+  assert.equal(await posted, 'stale')
+  assert.equal(opened, 0)
+
+  generation = 1
+  let release
+  const pending = new Promise((resolve) => { release = resolve })
+  const events = model.loadIfCurrent({
+    started: 1,
+    current: () => generation,
+    load: () => pending,
+  })
+  generation = 2
+  release([{ id: 'from-previous-club' }])
+  assert.equal(await events, 'stale')
+})

@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button'
 import { ArrowBackIcon } from '@/components/icons/NavigationIcons'
 import { SearchFieldIcon } from '@/components/icons/SearchFieldIcon'
 import { useAuth } from '@/context/AuthContext'
+import { currentSessionGeneration } from '@/features/auth/session-generation'
 import { ClubBottomNav } from '../category-policy/ClubBottomNav'
 import { JourneyDialog, usePlanJourney } from './plan-journey'
 import {
   businessDateLabel,
   chargeReading,
-  checkoutPlanCode,
   includedFeatures,
   limitsUseStoredPlan,
   moneyLabel,
@@ -52,11 +52,16 @@ export function ClubPlanPage() {
   const canView = authPhase === 'ready' && Boolean(context?.permissions?.includes('VIEW_BILLING'))
   const canManage = Boolean(context?.permissions?.includes('MANAGE_SUBSCRIPTION'))
   const clubId = canView ? context?.clubId ?? null : null
-  const plan = useClubPlan(clubId, user?.userId ?? 'anonymous')
+  const session = currentSessionGeneration()
+  const plan = useClubPlan(clubId, user?.userId ?? null, session)
   const journey = usePlanJourney({
     clubId,
+    userId: user?.userId ?? null,
+    session,
+    canManage,
     posting: plan.posting,
     rememberReference: plan.rememberReference,
+    recallReference: plan.recallReference,
     recheck: plan.recheck,
   })
   const recheck = plan.recheck
@@ -92,10 +97,7 @@ export function ClubPlanPage() {
     if (action === 'adjust') void journey.openAdjustment()
     if (action === 'resume') void journey.openResume()
     if (action === 'authorize') journey.openAuthorization(plan.subscription?.recurrenceAuthorizationUrl ?? null)
-    if (action === 'complete-payment') {
-      const code = checkoutPlanCode(plan.subscription?.requestedPlan?.planCode)
-      if (code) void journey.startCheckout(code)
-    }
+    if (action === 'complete-payment' && plan.subscription) void journey.completeRequestedPayment(plan.subscription)
   }
 
   const showFooter = canView && (plan.phase === 'loading' || plan.phase === 'error' || Boolean(actions.primary))
@@ -149,6 +151,7 @@ export function ClubPlanPage() {
       startCheckout={journey.startCheckout}
       confirmQuote={journey.confirmQuote}
       acceptReviewedTerms={journey.acceptReviewedTerms}
+      reopen={journey.reopen}
       confirmResume={journey.confirmResume}
       openAdjustment={journey.openAdjustment}
       checkPayment={journey.checkPayment}

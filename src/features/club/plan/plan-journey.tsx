@@ -2,51 +2,74 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { failureKind, planApi } from './plan-api'
 import {
-  adjustmentOpenDecision,
+  chargeOpenVerdict,
+  checkoutOpenDecision,
   checkoutPlanCode,
+  continuationAllowed,
   createSingleFlight,
+  dispatchCompletePayment,
   eligibleCheckoutPlans,
   interpretConflict,
   moneyLabel,
   businessDateLabel,
   instantLabel,
+  paymentRoute,
   presentableQuote,
   providerUrl,
   quoteSnapshot,
   resumePreviewCanConfirm,
   resumeResult,
   termsSnapshot,
+  unavailableCheckoutPlans,
   type AdjustmentQuote,
+  type BillingCharge,
+  type ChargeOpenVerdict,
   type ChargeTerms,
   type CheckoutLink,
   type CheckoutPlanCode,
+  type ClubSubscription,
   type ConflictOutcome,
   type PlanOffer,
   type ResumePreview,
   type ShownTerms,
 } from './plan-model'
-import { storedCharge } from './use-club-plan'
 
 type DialogState =
-  | { type: 'plans'; offers: PlanOffer[] | null; selected: CheckoutPlanCode | null; error: string | null }
+  | { type: 'plans'; offers: PlanOffer[] | null; unavailable: PlanOffer[]; selected: CheckoutPlanCode | null; error: string | null }
   | { type: 'quote'; quote: AdjustmentQuote; error: string | null }
   | { type: 'review'; link: CheckoutLink; terms: ChargeTerms }
+  | { type: 'confirm-checkout'; link: CheckoutLink }
   | { type: 'return'; link: CheckoutLink; blocked: boolean }
   | { type: 'resume'; preview: ResumePreview; error: string | null }
   | { type: 'requote'; message: string }
 
 interface JourneyInput {
   clubId: string | null
+  userId: string | null
+  session: number
+  canManage: boolean
   posting: { current: boolean }
   rememberReference: (reference: string) => void
+  recallReference: () => string | null
   recheck: (reason: 'manual' | 'focus') => Promise<void>
 }
 
-export function usePlanJourney({ clubId, posting, rememberReference, recheck }: JourneyInput) {
+export function usePlanJourney({ clubId, userId, session, canManage, posting, rememberReference, recallReference, recheck }: JourneyInput) {
   const flight = useRef(createSingleFlight())
+  const epoch = useRef(0)
   const [busy, setBusy] = useState(false)
   const [dialog, setDialog] = useState<DialogState | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const contextKey = `${userId ?? ''}:${session}:${clubId ?? ''}:${canManage}`
+  useEffect(() => {
+    epoch.current += 1
+    setDialog(null)
+    setNotice(null)
+    return () => { epoch.current += 1 }
+  }, [contextKey])
+  function live(started: number) {
+    return continuationAllowed(started, epoch.current)
+  }
 
   async function run<T>(key: string, task: () => Promise<T>): Promise<T> {
     setBusy(true)
@@ -59,18 +82,20 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
     }
   }
 
-  async function reconcile(intent: 'checkout' | 'adjustment' | 'resume'): Promise<ConflictOutcome> {
-    if (!clubId) return 'still-open'
-    const reference = storedCharge(clubId)
+  async function reconcile(intent: 'checkout' | 'adjustment' | 'resume', started: number): Promise<ConflictOutcome> {
+    if (!clubId || !live(started)) return 'still-open'
+    const reference = recallReference()
     const [charge, subscription] = await Promise.all([
-      reference ? planApi.charge(clubId, reference).catch(() => null) : Promise.resolve(null),
-      planApi.subscription(clubId).catch(() => null),
+      reference ? planApi.charge(clubId, reference).then((value) => value, () => null) : Promise.resolve(null),
+      planApi.subscription(clubId).then((value) => value, () => null),
     ])
+    if (!live(started)) return 'still-open'
     const decision = interpretConflict({
       intent,
       charge,
       resumeAction: subscription?.recurrenceResumeAction ?? null,
       recurrencePaused: subscription?.recurrencePaused ?? null,
+      subscriptionRead: subscription != null,
     })
     setNotice(conflictCopy(decision.outcome))
     await recheck('manual')
@@ -79,22 +104,46 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
 
   async function startCheckout(planCode: CheckoutPlanCode) {
     if (!clubId) return
+    const started = epoch.current
     setNotice(null)
     try {
+      const offers = await run(`offers:${clubId}`, () => planApi.offers())
+      if (!live(started)) return
+      const offer = eligibleCheckoutPlans(offers).find((item) => item.code === planCode)
+      if (!offer?.price?.amount || !offer.price.currency) {
+        setDialog((current) => current?.type === 'plans'
+          ? { ...current, error: 'Ese plan no tiene un precio mensual disponible. No iniciamos el cobro.' }
+          : current)
+        setNotice('Ese plan no tiene un precio mensual disponible. No iniciamos el cobro.')
+        return
+      }
+      const consent = { clubId, planCode, amount: offer.price.amount, currency: offer.price.currency }
       const link = await run(`checkout:${clubId}:${planCode}`, () => planApi.checkout(clubId, planCode))
+      if (!live(started)) return
       rememberReference(link.reference)
+      const decision = checkoutOpenDecision(consent, link)
+      if (decision === 'reject') {
+        setDialog(null)
+        setNotice('La respuesta no corresponde a este club o a este plan. No abrimos el enlace.')
+        return
+      }
+      if (decision === 'review') {
+        setDialog({ type: 'confirm-checkout', link })
+        return
+      }
       showReturn(link)
     } catch (error) {
+      if (!live(started)) return
       if (failureKind(error) === 'conflict') {
         setDialog(null)
-        await reconcile('checkout')
+        await reconcile('checkout', started)
         return
       }
       if (failureKind(error) === 'unauthorized') return
       setDialog((current) => current?.type === 'plans'
         ? { ...current, error: 'No pudimos iniciar el cobro. No se abrió otro intento automático.' }
         : current)
-      if (dialog?.type !== 'plans') setNotice('No pudimos iniciar el cobro. No se abrió otro intento automático.')
+      setNotice('No pudimos iniciar el cobro. No se abrió otro intento automático.')
     }
   }
 
@@ -105,22 +154,51 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
   }
 
   async function openUpgrade() {
-    if (!clubId) return
-    setDialog({ type: 'plans', offers: null, selected: null, error: null })
+    if (!clubId || !canManage) return
+    const started = epoch.current
+    setDialog({ type: 'plans', offers: null, unavailable: [], selected: null, error: null })
     try {
-      const offers = eligibleCheckoutPlans(await run(`offers:${clubId}`, () => planApi.offers()))
-      setDialog({ type: 'plans', offers, selected: null, error: offers.length ? null : 'No hay planes de pago disponibles en el catálogo.' })
+      const offers = await run(`offers:${clubId}`, () => planApi.offers())
+      if (!live(started)) return
+      const ready = eligibleCheckoutPlans(offers)
+      setDialog({
+        type: 'plans',
+        offers: ready,
+        unavailable: unavailableCheckoutPlans(offers),
+        selected: null,
+        error: ready.length ? null : 'No hay un plan con precio mensual disponible.',
+      })
     } catch (error) {
-      if (failureKind(error) === 'unauthorized') return
-      setDialog({ type: 'plans', offers: [], selected: null, error: 'No pudimos leer el catálogo. Reintentá desde acá.' })
+      if (!live(started) || failureKind(error) === 'unauthorized') return
+      setDialog({ type: 'plans', offers: [], unavailable: [], selected: null, error: 'No pudimos leer el catálogo. Reintentá desde acá.' })
     }
+  }
+
+  async function completeRequestedPayment(subscription: ClubSubscription) {
+    const started = epoch.current
+    await dispatchCompletePayment(paymentRoute({
+      requestedPlanCode: subscription.requestedPlan?.planCode ?? null,
+      requestAdjustmentQuote: subscription.actions.requestAdjustmentQuote,
+      fullCheckout: subscription.actions.fullCheckout,
+    }), {
+      startAdjustment: async () => { if (live(started)) await openAdjustment() },
+      startCheckout: async () => {
+        const code = checkoutPlanCode(subscription.requestedPlan?.planCode)
+        if (live(started) && code) await startCheckout(code)
+      },
+      explainBlocked: () => {
+        if (live(started)) setNotice('No podemos completar ese pago con las acciones actuales. No iniciamos otro cobro.')
+      },
+    })
   }
 
   async function openAdjustment() {
     if (!clubId) return
+    const started = epoch.current
     setNotice(null)
     try {
       const quote = await run(`quote:${clubId}`, () => planApi.quote(clubId))
+      if (!live(started)) return
       const state = presentableQuote(quote, Date.now())
       if (state === 'expired') {
         setDialog({ type: 'requote', message: 'La cotización venció. Pedí una nueva para ver las condiciones actuales.' })
@@ -133,39 +211,71 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
       }
       setDialog({ type: 'quote', quote, error: null })
     } catch (error) {
+      if (!live(started)) return
       if (failureKind(error) === 'conflict') {
-        await reconcile('adjustment')
+        await reconcile('adjustment', started)
         return
       }
       if (failureKind(error) !== 'unauthorized') setNotice('No pudimos consultar la cotización.')
     }
   }
 
+  function applyChargeVerdict(verdict: ChargeOpenVerdict, link: CheckoutLink, charge: BillingCharge | null) {
+    if (verdict === 'open') {
+      showReturn(link)
+      return
+    }
+    if (verdict === 'review' && charge?.terms) {
+      setDialog({ type: 'review', link, terms: charge.terms })
+      return
+    }
+    if (verdict === 'expired') {
+      setDialog({ type: 'requote', message: 'La cotización venció. Pedí una nueva antes de abrir el pago.' })
+      return
+    }
+    setDialog(null)
+    setNotice(verdictCopy(verdict))
+  }
+
+  async function readAndOpen(link: CheckoutLink, shown: ShownTerms | null) {
+    if (!clubId) return
+    const started = epoch.current
+    let charge: BillingCharge | null = null
+    try {
+      charge = await planApi.charge(clubId, link.reference)
+    } catch {
+      if (!live(started)) return
+      setNotice('No pudimos releer el cobro. No abrimos el enlace.')
+      return
+    }
+    if (!live(started)) return
+    applyChargeVerdict(chargeOpenVerdict({
+      expectedReference: link.reference,
+      expectedPlanCode: link.planCode,
+      shown,
+      charge,
+      url: link.url,
+      now: Date.now(),
+    }), link, charge)
+  }
+
   async function confirmQuote(quote: AdjustmentQuote) {
     if (!clubId) return
+    const started = epoch.current
     if (presentableQuote(quote, Date.now()) !== 'show') {
       setDialog({ type: 'requote', message: 'La cotización venció antes de confirmar. Pedí una nueva.' })
       return
     }
     try {
       const link = await run(`adjustment:${clubId}`, () => planApi.adjustmentCheckout(clubId))
+      if (!live(started)) return
       rememberReference(link.reference)
-      const charge = await planApi.charge(clubId, link.reference)
-      const decision = adjustmentOpenDecision(quoteSnapshot(quote), charge.terms, link.url)
-      if (decision === 'review' && charge.terms) {
-        setDialog({ type: 'review', link, terms: charge.terms })
-        return
-      }
-      if (decision === 'open') {
-        showReturn(link)
-        return
-      }
-      setDialog(null)
-      setNotice('Todavía sin confirmación. No abrimos el enlace.')
+      await readAndOpen(link, quoteSnapshot(quote))
     } catch (error) {
+      if (!live(started)) return
       if (failureKind(error) === 'conflict') {
         setDialog(null)
-        await reconcile('adjustment')
+        await reconcile('adjustment', started)
         return
       }
       if (failureKind(error) !== 'unauthorized') {
@@ -176,29 +286,38 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
     }
   }
 
-  function acceptReviewedTerms(link: CheckoutLink, terms: ChargeTerms) {
-    const decision = adjustmentOpenDecision(termsSnapshot(terms), terms, link.url)
-    if (decision !== 'open') {
-      setNotice('Todavía sin confirmación. No abrimos el enlace.')
-      setDialog(null)
-      return
-    }
-    showReturn(link)
+  async function acceptReviewedTerms(link: CheckoutLink, terms: ChargeTerms) {
+    await readAndOpen(link, termsSnapshot(terms))
+  }
+
+  async function reopen(link: CheckoutLink) {
+    await readAndOpen(link, link.amount && link.currency ? {
+      amount: link.amount,
+      currency: link.currency,
+      periodStart: null,
+      periodEnd: null,
+      payUntil: null,
+      eliteMonthlyAmount: null,
+      eliteMonthlyCurrency: null,
+    } : null)
   }
 
   async function openResume() {
     if (!clubId) return
+    const started = epoch.current
     setNotice(null)
     try {
       const preview = await run(`resume-preview:${clubId}`, () => planApi.resumePreview(clubId))
+      if (!live(started)) return
       if (!resumePreviewCanConfirm(preview)) {
         setNotice('Esta lectura no alcanza para reanudar. No confirmamos el pedido.')
         return
       }
       setDialog({ type: 'resume', preview, error: null })
     } catch (error) {
+      if (!live(started)) return
       if (failureKind(error) === 'conflict') {
-        await reconcile('resume')
+        await reconcile('resume', started)
         return
       }
       if (failureKind(error) !== 'unauthorized') setNotice('No pudimos leer la reanudación.')
@@ -207,8 +326,10 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
 
   async function confirmResume() {
     if (!clubId) return
+    const started = epoch.current
     try {
       const preview = await run(`resume-confirm:${clubId}`, () => planApi.resumeConfirm(clubId))
+      if (!live(started)) return
       setDialog(null)
       const result = resumeResult(preview)
       if (result === 'resumed') {
@@ -226,9 +347,10 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
       }
       await recheck('manual')
     } catch (error) {
+      if (!live(started)) return
       if (failureKind(error) === 'conflict') {
         setDialog(null)
-        await reconcile('resume')
+        await reconcile('resume', started)
         return
       }
       if (failureKind(error) !== 'unauthorized') {
@@ -261,8 +383,10 @@ export function usePlanJourney({ clubId, posting, rememberReference, recheck }: 
     openResume,
     openAuthorization,
     startCheckout,
+    completeRequestedPayment,
     confirmQuote,
     acceptReviewedTerms,
+    reopen,
     confirmResume,
     selectPlan: (planCode: CheckoutPlanCode) => setDialog((current) => current?.type === 'plans' ? { ...current, selected: planCode, error: null } : current),
     retryOffers: () => void openUpgrade(),
@@ -278,6 +402,7 @@ export function JourneyDialog({
   startCheckout,
   confirmQuote,
   acceptReviewedTerms,
+  reopen,
   confirmResume,
   openAdjustment,
   checkPayment,
@@ -288,7 +413,8 @@ export function JourneyDialog({
   selectPlan: (planCode: CheckoutPlanCode) => void
   startCheckout: (planCode: CheckoutPlanCode) => Promise<void>
   confirmQuote: (quote: AdjustmentQuote) => Promise<void>
-  acceptReviewedTerms: (link: CheckoutLink, terms: ChargeTerms) => void
+  acceptReviewedTerms: (link: CheckoutLink, terms: ChargeTerms) => Promise<void>
+  reopen: (link: CheckoutLink) => Promise<void>
   confirmResume: () => Promise<void>
   openAdjustment: () => Promise<void>
   checkPayment: () => Promise<void>
@@ -305,6 +431,7 @@ export function JourneyDialog({
       {dialog.offers == null && <p role="status">Cargando planes…</p>}
       {dialog.error && <p role="alert" className="text-sm text-[#aa3030]">{dialog.error}</p>}
       <div className="flex flex-col gap-3">
+        {dialog.unavailable.map((offer) => <p key={offer.code} className="text-sm text-[#605e64]">{offer.name}: sin precio mensual disponible</p>)}
         {dialog.offers?.map((offer) => {
           const code = checkoutPlanCode(offer.code)
           if (!code) return null
@@ -334,14 +461,22 @@ export function JourneyDialog({
       <TermsList shown={termsSnapshot(dialog.terms)} intro="La cotización vinculada a este cobro no coincide con lo que habías visto. Confirmá estas condiciones para abrir el pago. No vamos a pedir otro cobro." />
       <Actions>
         <Button variant="secondary" className="h-11 flex-1 rounded-lg border-0 bg-[#e7e7e8]" disabled={busy} onClick={close}>Volver</Button>
-        <Button className="h-11 flex-1 rounded-lg" disabled={busy} onClick={() => acceptReviewedTerms(dialog.link, dialog.terms)}>Abrir el pago</Button>
+        <Button className="h-11 flex-1 rounded-lg" disabled={busy} loading={busy} loadingLabel="Releyendo el cobro…" loadingMobileOnly={false} onClick={() => void acceptReviewedTerms(dialog.link, dialog.terms)}>Abrir el pago</Button>
+      </Actions>
+    </Panel>}
+    {dialog.type === 'confirm-checkout' && <Panel title="Condiciones del cobro" close={close} busy={busy}>
+      <p className="text-sm leading-5 text-[#605e64]">El servidor confirmó estas condiciones. Revisalas antes de abrir el pago. No vamos a crear otro cargo.</p>
+      <p className="text-sm font-semibold">Plan: {dialog.link.planCode}</p>
+      <p className="text-sm font-semibold">Importe: {moneyLabel(dialog.link.amount, dialog.link.currency)}</p>
+      <Actions>
+        <Button variant="secondary" className="h-11 flex-1 rounded-lg border-0 bg-[#e7e7e8]" disabled={busy} onClick={close}>Volver</Button>
+        <Button className="h-11 flex-1 rounded-lg" disabled={busy} onClick={() => void reopen(dialog.link)}>Abrir el pago</Button>
       </Actions>
     </Panel>}
     {dialog.type === 'return' && <Panel title="Volvé a comprobar el pago" close={close} busy={false}>
       <p className="text-sm leading-5 text-[#605e64]">Volvé a esta pantalla y tocá Comprobar pago. Cerrar la ventana de Mercado Pago no cancela el cobro.</p>
       {moneyLabel(dialog.link.amount, dialog.link.currency) && <p className="text-sm font-semibold">Importe del intento: {moneyLabel(dialog.link.amount, dialog.link.currency)}</p>}
-      {dialog.blocked && providerUrl(dialog.link.url) && <a className="text-sm font-medium underline" href={providerUrl(dialog.link.url) ?? undefined} target="_blank" rel="noopener noreferrer">Abrir el pago</a>}
-      {dialog.blocked && !providerUrl(dialog.link.url) && <p role="alert" className="text-sm text-[#aa3030]">El enlace de pago no es válido. No lo abrimos.</p>}
+      {dialog.blocked && <button type="button" className="min-h-11 text-left text-sm font-medium underline" onClick={() => void reopen(dialog.link)}>Abrir el pago</button>}
       <Actions>
         <Button className="h-11 flex-1 rounded-lg" onClick={() => { close(); void checkPayment() }}>Comprobar pago</Button>
       </Actions>
@@ -398,6 +533,18 @@ function priceLabel(offer: PlanOffer): string {
   return 'El importe se confirma al iniciar el cobro'
 }
 
+function verdictCopy(verdict: ChargeOpenVerdict): string {
+  switch (verdict) {
+    case 'confirmed': return 'El pago figura confirmado. No volvemos a abrirlo.'
+    case 'manual': return 'Este cobro quedó para resolución manual. El plan no se activó.'
+    case 'failed': return 'El cobro figura fallido. No abrimos el enlace.'
+    case 'canceled': return 'El cobro figura cancelado. No abrimos el enlace.'
+    case 'uncertain': return 'Todavía sin confirmación. No abrimos el enlace.'
+    case 'expired': return 'La cotización venció. Pedí una nueva.'
+    default: return 'No pudimos confirmar el cobro. No abrimos el enlace.'
+  }
+}
+
 function conflictCopy(outcome: ConflictOutcome): string {
   switch (outcome) {
     case 'confirmed': return 'El pago figura confirmado. El plan se actualiza con la lectura del servidor.'
@@ -406,6 +553,7 @@ function conflictCopy(outcome: ConflictOutcome): string {
     case 'failed': return 'El cobro figura fallido. Podés intentar el mismo plan otra vez.'
     case 'canceled': return 'El cobro figura cancelado. Podés intentar el mismo plan otra vez.'
     case 'already-resumed': return 'La renovación ya figura activa. No enviamos otro pedido.'
+    case 'authorization': return 'Falta la autorización del pagador. No dimos la reanudación por hecha.'
     case 'still-open': return 'No pudimos confirmar la operación. Comprobá el estado antes de intentar de nuevo.'
   }
 }

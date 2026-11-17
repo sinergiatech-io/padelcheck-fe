@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { failureKind, planApi } from './plan-api'
 import {
   chargeOpenVerdict,
-  checkoutOpenDecision,
   checkoutPlanCode,
   continuationAllowed,
   createSingleFlight,
@@ -17,6 +16,7 @@ import {
   presentableQuote,
   providerUrl,
   quoteSnapshot,
+  runFullCheckout,
   resumePreviewCanConfirm,
   resumeResult,
   termsSnapshot,
@@ -46,7 +46,7 @@ type DialogState =
 interface JourneyInput {
   clubId: string | null
   userId: string | null
-  session: number
+  session: string | null
   canManage: boolean
   posting: { current: boolean }
   rememberReference: (reference: string) => void
@@ -107,31 +107,37 @@ export function usePlanJourney({ clubId, userId, session, canManage, posting, re
     const started = epoch.current
     setNotice(null)
     try {
-      const offers = await run(`offers:${clubId}`, () => planApi.offers())
+      const result = await run(`checkout:${clubId}:${planCode}`, () => runFullCheckout({
+        clubId,
+        planCode,
+        loadOffers: () => planApi.offers(),
+        postCheckout: (code) => planApi.checkout(clubId, code),
+        loadCharge: (reference) => planApi.charge(clubId, reference),
+        now: Date.now(),
+      }))
       if (!live(started)) return
-      const offer = eligibleCheckoutPlans(offers).find((item) => item.code === planCode)
-      if (!offer?.price?.amount || !offer.price.currency) {
-        setDialog((current) => current?.type === 'plans'
-          ? { ...current, error: 'Ese plan no tiene un precio mensual disponible. No iniciamos el cobro.' }
-          : current)
-        setNotice('Ese plan no tiene un precio mensual disponible. No iniciamos el cobro.')
+      if ('link' in result) rememberReference(result.link.reference)
+      if (result.kind === 'unavailable') {
+        const message = 'Ese plan no tiene un precio mensual disponible. No iniciamos el cobro.'
+        setDialog((current) => current?.type === 'plans' ? { ...current, error: message } : current)
+        setNotice(message)
         return
       }
-      const consent = { clubId, planCode, amount: offer.price.amount, currency: offer.price.currency }
-      const link = await run(`checkout:${clubId}:${planCode}`, () => planApi.checkout(clubId, planCode))
-      if (!live(started)) return
-      rememberReference(link.reference)
-      const decision = checkoutOpenDecision(consent, link)
-      if (decision === 'reject') {
+      if (result.kind === 'reject') {
         setDialog(null)
         setNotice('La respuesta no corresponde a este club o a este plan. No abrimos el enlace.')
         return
       }
-      if (decision === 'review') {
-        setDialog({ type: 'confirm-checkout', link })
+      if (result.kind === 'review') {
+        setDialog({ type: 'confirm-checkout', link: result.link })
         return
       }
-      showReturn(link)
+      if (result.kind === 'open') {
+        showReturn(result.link)
+        return
+      }
+      setDialog(null)
+      setNotice(verdictCopy(result.kind))
     } catch (error) {
       if (!live(started)) return
       if (failureKind(error) === 'conflict') {

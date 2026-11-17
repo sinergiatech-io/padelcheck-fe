@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { ArrowBackIcon } from '@/components/icons/NavigationIcons'
 import { SearchFieldIcon } from '@/components/icons/SearchFieldIcon'
 import { useAuth } from '@/context/AuthContext'
-import { currentSessionGeneration } from '@/features/auth/session-generation'
 import { ClubBottomNav } from '../category-policy/ClubBottomNav'
 import { JourneyDialog, usePlanJourney } from './plan-journey'
 import {
@@ -23,7 +22,7 @@ import {
   type PlanAction,
   type UsageMeter,
 } from './plan-model'
-import { useClubPlan } from './use-club-plan'
+import { useBillingAuth, useClubPlan } from './use-club-plan'
 
 const METER_TONE = {
   plain: 'bg-[#fefefe]',
@@ -52,7 +51,7 @@ export function ClubPlanPage() {
   const canView = authPhase === 'ready' && Boolean(context?.permissions?.includes('VIEW_BILLING'))
   const canManage = Boolean(context?.permissions?.includes('MANAGE_SUBSCRIPTION'))
   const clubId = canView ? context?.clubId ?? null : null
-  const session = currentSessionGeneration()
+  const session = useBillingAuth(user?.userId ?? null)
   const plan = useClubPlan(clubId, user?.userId ?? null, session)
   const journey = usePlanJourney({
     clubId,
@@ -111,7 +110,7 @@ export function ClubPlanPage() {
     </header>
     <main className="min-h-0 flex-1 overflow-y-auto" aria-busy={plan.phase === 'loading'}>
       <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-4">
-        {!canView ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'loading' ? <LoadingState /> : plan.phase === 'forbidden' ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'error' || !plan.subscription || !plan.usage ? <p role="alert" className="rounded-lg border border-[#fac5c5] bg-[#fdecec] p-3 text-sm leading-5">No pudimos cargar el plan. Reintentá para consultar la suscripción y el uso. No mostramos esos datos como cero.</p> : <>
+        {!canView ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'loading' || plan.phase === 'idle' ? <LoadingState /> : plan.phase === 'forbidden' ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'error' || !plan.subscription || !plan.usage ? <p role="alert" className="rounded-lg border border-[#fac5c5] bg-[#fdecec] p-3 text-sm leading-5">No pudimos cargar el plan. Reintentá para consultar la suscripción y el uso. No mostramos esos datos como cero.</p> : <>
           <PlanIdentity subscription={plan.subscription} usage={plan.usage} />
           {plan.subscription.requestedPlan && <PendingRequest planCode={plan.subscription.requestedPlan.planCode} current={plan.subscription.planCode} />}
           {plan.charge && <ChargeNote status={chargeReading(plan.charge)} />}

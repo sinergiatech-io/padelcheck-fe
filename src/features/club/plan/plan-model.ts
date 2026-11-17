@@ -188,7 +188,7 @@ export interface KeyValueStore {
 
 export interface BillingScope {
   userId: string
-  session: number
+  session: string
   clubId: string
 }
 
@@ -260,7 +260,7 @@ export function chargeStorageKey(scope: BillingScope): string {
 
 export function rememberCharge(store: KeyValueStore, scope: BillingScope, reference: string): void {
   const safe = opaqueReference(reference)
-  if (!safe || !scope.userId || !scope.clubId || !Number.isInteger(scope.session)) return
+  if (!safe || !scope.userId || !scope.clubId || !/^[A-Za-z0-9-]{8,80}$/.test(scope.session)) return
   store.setItem(chargeStorageKey(scope), safe)
 }
 
@@ -593,8 +593,67 @@ export function chargeOpenVerdict(input: {
   if (payUntil && !quoteStillValid(payUntil, input.now)) return 'expired'
   if (input.charge.terms) {
     if (!input.shown || !sameSnapshot(input.shown, termsSnapshot(input.charge.terms))) return 'review'
+  } else if (!input.shown
+    || !moneyEqual(input.shown.amount, input.charge.amount)
+    || !sameText(input.shown.currency, input.charge.currency)) {
+    return 'review'
   }
   return providerUrl(input.url) ? 'open' : 'withhold'
+}
+
+export type CheckoutFollowUp =
+  | { kind: 'unavailable' }
+  | { kind: 'reject'; link: CheckoutLink }
+  | { kind: 'review'; link: CheckoutLink }
+  | { kind: 'open'; link: CheckoutLink }
+  | { kind: Exclude<ChargeOpenVerdict, 'open' | 'review'>; link: CheckoutLink }
+
+/** One checkout post, then the same charge read used before any provider window. */
+export async function runFullCheckout(input: {
+  clubId: string
+  planCode: CheckoutPlanCode
+  loadOffers: () => Promise<PlanOffer[]>
+  postCheckout: (planCode: CheckoutPlanCode) => Promise<CheckoutLink>
+  loadCharge: (reference: string) => Promise<BillingCharge>
+  now: number
+}): Promise<CheckoutFollowUp> {
+  const offers = await input.loadOffers()
+  const offer = eligibleCheckoutPlans(offers).find((item) => item.code === input.planCode)
+  if (!offer?.price?.amount || !offer.price.currency) return { kind: 'unavailable' }
+  const link = await input.postCheckout(input.planCode)
+  const decision = checkoutOpenDecision({
+    clubId: input.clubId,
+    planCode: input.planCode,
+    amount: offer.price.amount,
+    currency: offer.price.currency,
+  }, link)
+  if (decision === 'reject') return { kind: 'reject', link }
+  if (decision === 'review') return { kind: 'review', link }
+  let charge: BillingCharge | null = null
+  try {
+    charge = await input.loadCharge(link.reference)
+  } catch {
+    return { kind: 'withhold', link }
+  }
+  const verdict = chargeOpenVerdict({
+    expectedReference: link.reference,
+    expectedPlanCode: link.planCode,
+    shown: {
+      amount: offer.price.amount,
+      currency: offer.price.currency,
+      periodStart: null,
+      periodEnd: null,
+      payUntil: null,
+      eliteMonthlyAmount: null,
+      eliteMonthlyCurrency: null,
+    },
+    charge,
+    url: link.url,
+    now: input.now,
+  })
+  if (verdict === 'open') return { kind: 'open', link }
+  if (verdict === 'review') return { kind: 'review', link }
+  return { kind: verdict, link }
 }
 
 export function resumePreviewCanConfirm(preview: ResumePreview): boolean {

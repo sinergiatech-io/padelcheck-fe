@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { billingBrowserStore, ensureBillingAuth } from './billing-session'
 import { failureKind, planApi, type BillingCharge, type ClubEventOption } from './plan-api'
 import {
   acceptRead,
@@ -6,7 +7,6 @@ import {
   chargeStorageKey,
   focusRecheckAllowed,
   forgetCharge,
-  forgetPlanCharges,
   loadIfCurrent,
   nextEventSelection,
   recallCharge,
@@ -14,23 +14,29 @@ import {
   type BillingScope,
   type ClubSubscription,
   type ClubUsage,
-  type KeyValueStore,
 } from './plan-model'
 
 export type PlanPhase = 'idle' | 'loading' | 'ready' | 'error' | 'forbidden'
 
-const sessionStore: KeyValueStore = {
-  getItem: (key) => sessionStorage.getItem(key),
-  setItem: (key, value) => sessionStorage.setItem(key, value),
-  removeItem: (key) => sessionStorage.removeItem(key),
-  keys: () => Object.keys(sessionStorage),
+const sessionStore = billingBrowserStore()
+
+export function useBillingAuth(userId: string | null): string | null {
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!userId) {
+      setSessionId(null)
+      return
+    }
+    setSessionId(ensureBillingAuth(sessionStore, userId, () => crypto.randomUUID()).id)
+  }, [userId])
+  return sessionId
 }
 
 export function storedCharge(scope: BillingScope): string | null {
   return recallCharge(sessionStore, scope)
 }
 
-export function useClubPlan(clubId: string | null, userId: string | null, session: number) {
+export function useClubPlan(clubId: string | null, userId: string | null, session: string | null) {
   const sessionKey = `${userId ?? ''}:${session}`
   const generation = useRef(0)
   const usageTicket = useRef(0)
@@ -39,7 +45,7 @@ export function useClubPlan(clubId: string | null, userId: string | null, sessio
   const posting = useRef(false)
   const hasData = useRef(false)
   const scopeRef = useRef<BillingScope | null>(null)
-  scopeRef.current = clubId && userId ? { userId, session, clubId } : null
+  scopeRef.current = clubId && userId && session ? { userId, session, clubId } : null
   const [phase, setPhase] = useState<PlanPhase>('idle')
   const [subscription, setSubscription] = useState<ClubSubscription | null>(null)
   const [usage, setUsage] = useState<ClubUsage | null>(null)
@@ -201,10 +207,6 @@ export function useClubPlan(clubId: string | null, userId: string | null, sessio
   }, [clubId, currentScope, loadCharge, recoverWithoutEvent, replaceEvent, sessionKey])
 
   useEffect(() => {
-    if (!userId) forgetPlanCharges(sessionStore)
-  }, [userId])
-
-  useEffect(() => {
     generation.current += 1
     usageTicket.current += 1
     replaceEvent(null)
@@ -219,7 +221,7 @@ export function useClubPlan(clubId: string | null, userId: string | null, sessio
     hasData.current = false
     const active = currentScope()
     setReference(active ? recallCharge(sessionStore, active) : null)
-    if (!clubId || !userId) {
+    if (!clubId || !userId || !session) {
       setPhase('idle')
       return
     }

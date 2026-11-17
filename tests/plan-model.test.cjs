@@ -225,7 +225,7 @@ test('late reads and repeated posts stay inside one club, event and session', as
 
 test('returning to the panel can recheck a stored reference without polling or posting', () => {
   const store = memory()
-  const scope = { userId: 'user-a', session: 2, clubId: 'club-a' }
+  const scope = { userId: 'user-a', session: 'session-a1', clubId: 'club-a' }
   model.rememberCharge(store, scope, 'pc123')
   assert.equal(model.recallCharge(store, scope), 'pc123')
   assert.equal(model.recallCharge(store, { ...scope, clubId: 'club-b' }), null)
@@ -331,6 +331,38 @@ test('opening a reviewed charge rereads status, plan and expiry instead of trust
   assert.equal(verdict(charge('UNCERTAIN')), 'uncertain')
   assert.equal(verdict(null), 'withhold')
   assert.equal(verdict(charge('OPEN'), 'https://evil.test/pay'), 'withhold')
+})
+
+test('a full checkout reads the charge once and does not open a failed or uncertain result', async () => {
+  const offer = { ...model.parseOffers([{ code: 'PRO', name: 'Pro', description: null, free: false, features: [], price: { status: 'AVAILABLE', amount: '15000.00', currency: 'ARS', period: 'MONTH' } }])[0] }
+  const link = { clubId: 'club-a', planCode: 'PRO', amount: '15000.00', currency: 'ARS', url: 'https://billing.test/checkout/pc9', reference: 'pc9' }
+  let posts = 0
+  const charge = (status) => ({
+    reference: 'pc9', kind: 'FIRST', planCode: 'PRO', status, amount: '15000.00', currency: 'ARS',
+    periodStart: null, periodEnd: null, confirmed: status === 'APPLIED', manualResolution: status === 'UNAPPLIED', terms: null,
+  })
+  const run = (status, fail = false) => model.runFullCheckout({
+    clubId: 'club-a',
+    planCode: 'PRO',
+    loadOffers: async () => [offer],
+    postCheckout: async () => { posts += 1; return link },
+    loadCharge: async () => { if (fail) throw new Error('read failed'); return charge(status) },
+    now: Date.parse('2026-11-17T12:00:00Z'),
+  })
+  assert.equal((await run('OPEN')).kind, 'open')
+  assert.equal((await run('FAILED')).kind, 'failed')
+  assert.equal((await run('UNCERTAIN')).kind, 'uncertain')
+  assert.equal((await run('UNAPPLIED')).kind, 'manual')
+  assert.equal((await run('OPEN', true)).kind, 'withhold')
+  assert.equal(posts, 5)
+  const mismatched = { ...charge('OPEN'), amount: '1.00' }
+  const reviewed = await model.runFullCheckout({
+    clubId: 'club-a', planCode: 'PRO', loadOffers: async () => [offer],
+    postCheckout: async () => link,
+    loadCharge: async () => mismatched,
+    now: Date.parse('2026-11-17T12:00:00Z'),
+  })
+  assert.equal(reviewed.kind, 'review')
 })
 
 test('a late checkout url and a late event list do not land on the next club', async () => {

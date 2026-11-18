@@ -16,6 +16,7 @@ import { bumpSessionGeneration, currentSessionGeneration } from '@/features/auth
 import { ApiError } from '@/lib/api-client'
 import { clearStoredToken, getStoredToken, setStoredToken } from '@/lib/auth'
 import { setHttpErrorListener } from '@/lib/http-client'
+import { billingBrowserStore, endBillingAuth } from '@/features/club/plan/billing-session'
 import { queryClient } from '@/lib/query-client'
 import type { AuthPrincipal } from '@/types/auth'
 
@@ -49,6 +50,7 @@ function readExpires(): number | null {
 }
 
 function clearPrivateSession() {
+  endBillingAuth(billingBrowserStore())
   queryClient.clear()
   clearStoredToken()
   localStorage.removeItem(USER_KEY)
@@ -113,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout])
 
   const login = useCallback((token: string, user: AuthPrincipal, expiresIn: number) => {
+    endBillingAuth(billingBrowserStore())
     const generation = bumpSessionGeneration()
     const expiresAt = Number.isFinite(expiresIn) && expiresIn > 0 ? Date.now() + expiresIn * 1000 : null
     setStoredToken(token)

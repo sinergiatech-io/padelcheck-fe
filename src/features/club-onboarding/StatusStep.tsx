@@ -13,7 +13,7 @@ export function StatusStep({ flow, state, screen, titleRef, onLogin, onFinish }:
   if (!copy) return null
   const busy = state.busy
   const paymentTry = screen === 'payment-canceled' || screen === 'payment-unconfirmed'
-  let banner = { title: copy.banner, detail: copy.detail, tone: copy.tone }
+  let banner: { title: string; detail: string; tone: typeof copy.tone; clock?: boolean } = { title: copy.banner, detail: copy.detail, tone: copy.tone, clock: copy.clock }
   if (state.notice) banner = { ...NOTICE_COPY[state.notice], tone: 'error' }
   else if (screen === 'verify-pending' && state.resent) banner = { title: 'Email reenviado', detail: 'Revisá tu bandeja de entrada y la carpeta de spam.', tone: 'success' }
   else if (screen === 'verify-pending' && state.notVerified) banner = { title: 'Todavía no recibimos la verificación', detail: 'Abrí el enlace del correo y volvé a intentar.', tone: 'warning' }
@@ -39,6 +39,6 @@ export function StatusStep({ flow, state, screen, titleRef, onLogin, onFinish }:
     {paymentTry && <TextButton label="Reintentar pago" disabled={!!busy} onClick={() => void flow.continuePlan()} />}
   </>}>
     <StepHeading step={copy.step} title={copy.title} subtitle={subtitle} titleRef={titleRef} />
-    <RegistrationBanner title={banner.title} detail={banner.detail} tone={banner.tone} />
+    <RegistrationBanner title={banner.title} detail={banner.detail} tone={banner.tone} clock={banner.clock} />
   </StepFrame>
 }

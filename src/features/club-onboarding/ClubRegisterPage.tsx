@@ -50,5 +50,5 @@ export function ClubRegisterPage({ bearer = false }: { bearer?: boolean }) {
   else if (screen === 'plan') body = <PlanStep flow={flow} state={state} titleRef={titleRef} />
   else if (screen === 'venue') body = <VenueStep flow={flow} state={state} titleRef={titleRef} />
   else body = <StatusStep flow={flow} state={state} screen={screen} titleRef={titleRef} onLogin={() => navigate('/login')} onFinish={finish} />
-  return <RegistrationShell>{body}</RegistrationShell>
+  return <RegistrationShell hero={state.screen === 'account'}>{body}</RegistrationShell>
 }

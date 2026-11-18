@@ -6,7 +6,7 @@ import { registrationFieldClass } from '@/features/auth/components/RegistrationS
 export function StepHeading({ step, title, subtitle, titleRef }: { step: string; title: string; subtitle?: string; titleRef: Ref<HTMLHeadingElement> }) {
   return <div className="flex flex-col gap-2 pb-2">
     <p className="text-sm font-semibold leading-5 text-[#605E64]">{step}</p>
-    <h1 ref={titleRef} tabIndex={-1} className="text-2xl font-bold leading-8 outline-none">{title}</h1>
+    <h1 ref={titleRef} tabIndex={-1} className="text-2xl font-semibold leading-8 outline-none">{title}</h1>
     {subtitle && <p className="text-base leading-6 text-[#605E64]">{subtitle}</p>}
   </div>
 }
@@ -27,7 +27,7 @@ export function PrimaryButton({ label, loading, disabled, onClick, type = 'butto
   </button>
 }
 export function TextButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
-  return <button type="button" onClick={onClick} disabled={disabled} className="flex h-11 w-full items-center justify-center text-sm font-medium disabled:text-[#929195]">{label}</button>
+  return <button type="button" onClick={onClick} disabled={disabled} className="mt-1 flex h-12 w-full items-center justify-center text-sm font-medium disabled:text-[#929195]">{label}</button>
 }
 
 export function TextField({ id, label, value, onChange, error, required, optional, type = 'text', autoComplete, placeholder, disabled, maxLength, trailing, inputMode }: {

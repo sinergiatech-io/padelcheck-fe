@@ -44,7 +44,7 @@ export function VenueStep({ flow, state, titleRef }: { flow: ClubOnboardingFlow;
           <p className="text-sm font-semibold leading-5">{courts.length > 1 ? `Cancha ${index + 1}` : 'Cancha'}</p>
           {courts.length > 1 && <button type="button" disabled={busy} onClick={() => setCourts(current => current.filter(item => item.key !== court.key))} aria-label={`Quitar cancha ${index + 1}`} className="flex min-h-11 items-center px-2 text-sm font-medium text-[#AA3030]">Quitar</button>}
         </div>
-        <TextField id={`court-${court.key}`} label="Nombre de la cancha" required value={court.name} onChange={value => updateCourt(court.key, value)} error={errors.courts[court.key] || undefined} disabled={busy} maxLength={100} placeholder="Cancha 1" />
+        <TextField id={`court-${court.key}`} label="Nombre de la cancha" required value={court.name} onChange={value => updateCourt(court.key, value)} error={errors.courts[court.key] || undefined} disabled={busy} maxLength={100} placeholder={`Cancha ${index + 1}`} />
       </div>)}
       <button type="button" disabled={busy} onClick={() => { counter.current += 1; setErrors(current => ({ ...current, noCourts: false })); setCourts(current => [...current, { key: `court-${counter.current}`, name: '' }]) }}
         className="flex h-12 items-center justify-center gap-3 text-sm font-medium disabled:text-[#929195]"><span aria-hidden="true" className="text-xl leading-none">+</span>Agregar cancha</button>

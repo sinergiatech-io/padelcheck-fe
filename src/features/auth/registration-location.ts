@@ -185,6 +185,15 @@ export class RegistrationLocation {
       },
     })
   }
+  /** Seeds a saved location (club resume, venue preload) before initialize(); the catalogs are still loaded. Editable afterwards. */
+  preset(value: { provinceId: string; provinceName: string; localityId: string; localityName: string }) {
+    const province = { id: value.provinceId, name: value.provinceName }
+    this.update({
+      province, provinces: [province], errors: {}, problem: undefined,
+      selection: { countryCode: 'AR', provinceId: value.provinceId, provinceName: value.provinceName, localityId: value.localityId, localityName: value.localityName },
+      localities: [{ id: value.localityId, name: value.localityName, provinceId: value.provinceId }],
+    })
+  }
   validate() {
     const errors = {
       ...(!this.state.province ? { province: 'Seleccioná una provincia.' } : {}),

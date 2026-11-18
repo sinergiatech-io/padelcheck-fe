@@ -73,6 +73,14 @@ El cliente (`src/lib/api-client.ts`) envía `Authorization: Bearer <token>` cuan
 
 `npm run build` genera los estáticos en `dist/`. Para producción, configurá `VITE_API_BASE_URL` al endpoint real del API si no usás el mismo origen que el frontend.
 
+### Retorno de Checkout Pro
+
+El dominio asociado en mobile es `padelcheck-fe.pages.dev`. El build genera los archivos de asociación en `dist/.well-known/` con los identificadores públicos del binario que se va a distribuir. Configurá `VITE_ANDROID_APP_LINK_SHA256` con las huellas SHA-256 de firma de Android, separadas por coma, y `VITE_IOS_APP_LINK_ID` con el identificador firmado de iOS (por ejemplo, `TeamID.BundleID`). Publicá los archivos en ese mismo dominio.
+
+Cloudflare Pages sirve los archivos existentes directamente y aplica su fallback de SPA a las rutas de React Router. Conservá el build sin un `404.html` de nivel raíz ni una reescritura general que sustituya los archivos de asociación por `index.html`.
+
+Una vez disponible `https://padelcheck-fe.pages.dev/billing/return`, configurá esa URL en `MP_CHECKOUT_RETURN_URL` del servicio. Aplica a las nuevas preferencias de Checkout Pro. La página permite volver a la app o seguir al panel en el navegador cuando el sistema no abre la app directamente.
+
 ## Idioma y metadatos
 
 La app está orientada al **español** (`index.html` usa `lang="es"`). El título por defecto refleja el producto: gestión de torneos para clubes.

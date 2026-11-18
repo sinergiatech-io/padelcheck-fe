@@ -2,6 +2,7 @@ import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterP
 import { CategoryPolicyPage } from '@/features/club/category-policy/CategoryPolicyPage'
 import { ClubVenuesPage, MyClubPage } from '@/features/club/venues/ClubVenuesPage'
 import { ClubPlanPage } from '@/features/club/plan/ClubPlanPage'
+import { CheckoutReturnPage } from '@/features/club/plan/CheckoutReturnPage'
 import { ClubInfoPage } from '@/features/club/profile/ClubInfoPage'
 import { ClubSportSettingsPage } from '@/features/club/profile/ClubSportSettingsPage'
 import { ClubPublicProfilePage } from '@/features/club/profile/ClubPublicProfilePage'
@@ -77,6 +78,7 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
 
 const router = createBrowserRouter(createRoutesFromElements(
       <Route errorElement={<StartupRouteError />}>
+        <Route path="/billing/return" element={<StartupReady><CheckoutReturnPage /></StartupReady>} />
         <Route path="/club/settings" element={<ProtectedRoute><StartupReady><MyClubPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/plan" element={<ProtectedRoute><StartupReady><ClubPlanPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/settings/info" element={<ProtectedRoute><StartupReady><ClubInfoPage /></StartupReady></ProtectedRoute>} />

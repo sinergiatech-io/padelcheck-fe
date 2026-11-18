@@ -61,7 +61,8 @@ export function venueHasErrors(errors: ReturnType<typeof validateVenue>) {
 }
 
 /* ---------- local persistence: only the opaque session id and the email, never a password or an unsaved draft ---------- */
-export interface StoredSession { sessionId: string; email: string }
+/** `paying` only marks that the provider checkout was opened, so a return/reload lands on the payment status instead of the venue. */
+export interface StoredSession { sessionId: string; email: string; paying?: boolean }
 export interface KeyValueStore { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void }
 export const SESSION_KEY = 'padelcheck.club-onboarding'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -71,11 +72,11 @@ export function loadSession(store: KeyValueStore | null): StoredSession | null {
     if (!raw) return null
     const value = JSON.parse(raw) as Record<string, unknown>
     if (typeof value.sessionId !== 'string' || !UUID.test(value.sessionId)) return null
-    return { sessionId: value.sessionId, email: typeof value.email === 'string' ? value.email : '' }
+    return { sessionId: value.sessionId, email: typeof value.email === 'string' ? value.email : '', ...(value.paying === true ? { paying: true } : {}) }
   } catch { return null }
 }
 export function saveSession(store: KeyValueStore | null, session: StoredSession) {
-  try { store?.setItem(SESSION_KEY, JSON.stringify({ sessionId: session.sessionId, email: session.email })) } catch { /* storage unavailable: resume simply won't be offered */ }
+  try { store?.setItem(SESSION_KEY, JSON.stringify({ sessionId: session.sessionId, email: session.email, ...(session.paying ? { paying: true } : {}) })) } catch { /* storage unavailable: resume simply won't be offered */ }
 }
 export function clearSession(store: KeyValueStore | null) {
   try { store?.removeItem(SESSION_KEY) } catch { /* ignore */ }
@@ -121,12 +122,12 @@ export function paymentScreen(resume: ResumeSnapshot): Extract<Screen, `payment-
   if (resume.paymentStatus === 'FAILED' || resume.paymentStatus === 'UNAPPLIED') return 'payment-unconfirmed'
   return 'payment-pending'
 }
-export function screenFromResume(resume: ResumeSnapshot): Screen {
+export function screenFromResume(resume: ResumeSnapshot, awaitingPayment = false): Screen {
   switch (resume.step) {
     case 'EMAIL_VERIFICATION': return resume.emailVerified ? 'verified' : 'verify-pending'
     case 'CLUB': return 'club'
     case 'PLAN': return paymentScreen(resume) ?? 'plan'
-    case 'VENUE': return 'venue'
+    case 'VENUE': return (awaitingPayment ? paymentScreen(resume) : null) ?? 'venue'
     case 'DONE': return 'done'
   }
 }
@@ -177,7 +178,7 @@ export function planCards(offers: PlanOfferInput[] | null): PlanCard[] {
 
 /* ---------- copy ---------- */
 export type Tone = 'info' | 'success' | 'error' | 'warning' | 'neutral'
-export interface StatusCopy { step: string; title: string; subtitle: string; banner: string; detail: string; cta: string; tone: Tone }
+export interface StatusCopy { step: string; title: string; subtitle: string; banner: string; detail: string; cta: string; tone: Tone; clock?: boolean }
 export function statusCopy(screen: Screen, email: string, planCode: PlanCode = 'PRO'): StatusCopy | null {
   const paid = planCode === 'ELITE' ? 'ELITE' : planCode === 'PRO' ? 'PRO' : 'FREE'
   switch (screen) {
@@ -185,9 +186,9 @@ export function statusCopy(screen: Screen, email: string, planCode: PlanCode = '
     case 'verify-checking': return { step: 'Paso 2 de 5', title: 'Verificando tu email', subtitle: 'Estamos comprobando el enlace de verificación.', banner: 'Verificación en curso', detail: 'Esperá unos segundos.', cta: 'Verificando…', tone: 'info' }
     case 'verified': return { step: 'Paso 2 de 5', title: 'Email verificado', subtitle: 'Tu cuenta está verificada y lista para avanzar.', banner: 'Verificación completada', detail: 'Ya podés registrar los datos de tu club.', cta: 'Continuar', tone: 'success' }
     case 'verify-error': return { step: 'Paso 2 de 5', title: 'No pudimos verificar tu email', subtitle: 'Tu cuenta conserva el estado pendiente.', banner: 'Error de verificación', detail: 'No pudimos verificar tu email. Intentá de nuevo.', cta: 'Reintentar', tone: 'error' }
-    case 'verify-invalid': return { step: 'Paso 2 de 5', title: 'Necesitás un nuevo enlace', subtitle: 'Este enlace venció o ya no es válido.', banner: 'El enlace ya no está disponible', detail: 'Pedí uno nuevo para verificar tu email y continuar.', cta: 'Enviar un nuevo enlace', tone: 'warning' }
+    case 'verify-invalid': return { step: 'Paso 2 de 5', title: 'Necesitás un nuevo enlace', subtitle: 'Este enlace venció o ya no es válido.', banner: 'El enlace ya no está disponible', detail: 'Pedí uno nuevo para verificar tu email y continuar.', cta: 'Enviar un nuevo enlace', tone: 'warning', clock: true }
     case 'resume-error': return { step: 'Retomá tu registro', title: 'No pudimos retomar tu registro', subtitle: 'Tus datos guardados siguen a salvo.', banner: 'Sin conexión', detail: 'Revisá tu conexión e intentá de nuevo.', cta: 'Reintentar', tone: 'error' }
-    case 'session-expired': return { step: 'Retomá tu registro', title: 'Volvé a iniciar sesión', subtitle: 'Podés continuar con los pasos que ya guardaste.', banner: 'Tu sesión venció', detail: 'Iniciá sesión y retomá desde el primer paso incompleto.', cta: 'Iniciar sesión', tone: 'warning' }
+    case 'session-expired': return { step: 'Retomá tu registro', title: 'Volvé a iniciar sesión', subtitle: 'Podés continuar con los pasos que ya guardaste.', banner: 'Tu sesión venció', detail: 'Iniciá sesión y retomá desde el primer paso incompleto.', cta: 'Iniciar sesión', tone: 'warning', clock: true }
     case 'payment-pending': return { step: 'Paso 4 de 5 · Pago', title: 'Pago pendiente', subtitle: 'Todavía no recibimos la confirmación del pago.', banner: 'Esperando confirmación', detail: 'FREE sigue activo. El plan elegido se activará al confirmar el pago.', cta: 'Continuar con FREE', tone: 'warning' }
     case 'payment-canceled': return { step: 'Paso 4 de 5 · Pago', title: 'Pago cancelado', subtitle: 'Podés continuar la configuración con FREE', banner: 'El plan pago no se activó', detail: 'FREE sigue activo. Podés continuar ahora o reintentar el pago.', cta: 'Continuar con FREE', tone: 'neutral' }
     case 'payment-unconfirmed': return { step: 'Paso 4 de 5 · Pago', title: 'Pago no confirmado', subtitle: 'No pudimos confirmar el cobro del plan.', banner: 'El pago falló', detail: 'FREE sigue activo. Podés continuar ahora o reintentar el pago.', cta: 'Continuar con FREE', tone: 'error' }

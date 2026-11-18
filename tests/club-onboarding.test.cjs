@@ -283,6 +283,25 @@ test('payment failures never block the venue: FREE continues, retry opens a new 
   t.flow.goVenue(); assert.equal(t.screen(), 'venue')
 })
 
+test('returning from the provider lands on the payment status even when the server already reports VENUE; continuing with FREE clears that', async () => {
+  const server = fakeServer(); server.resume = resumeBody({ emailVerified: true, step: 'PLAN', club: savedClub })
+  const store = memoryStore({ [SESSION_KEY]: JSON.stringify({ sessionId: SID, email: 'a@b.com' }) })
+  const first = setup({ server, store })
+  await first.flow.init({ bearer: false }); first.flow.selectPlan('PRO'); await first.flow.continuePlan()
+  server.resume = { ...server.resume, step: 'VENUE', paymentStatus: 'OPEN' }
+  const back = setup({ server, store })
+  await back.flow.init({ bearer: false }); assert.equal(back.screen(), 'payment-pending')
+  server.resume = { ...server.resume, paymentStatus: 'CANCELED' }
+  await back.flow.checkPayment(); assert.equal(back.screen(), 'payment-canceled')
+  back.flow.goVenue()
+  const reload = setup({ server, store })
+  await reload.flow.init({ bearer: false }); assert.equal(reload.screen(), 'venue')
+  assert.equal(JSON.parse(store.getItem(SESSION_KEY)).paying, undefined)
+  // a stored session that never opened a checkout keeps going to the venue
+  const plain = setup({ server, store: memoryStore({ [SESSION_KEY]: JSON.stringify({ sessionId: SID, email: 'a@b.com' }) }) })
+  await plain.flow.init({ bearer: false }); assert.equal(plain.screen(), 'venue')
+})
+
 test('an untrusted checkout link is not opened', async () => {
   const server = fakeServer(); server.resume = resumeBody({ emailVerified: true, step: 'PLAN', club: savedClub })
   server.call = (orig => async (method, path, body) => path.startsWith('/onboarding/clubs/checkout') ? { url: 'http://evil.example/pay' } : orig(method, path, body))(server.call)

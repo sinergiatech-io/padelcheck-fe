@@ -71,9 +71,10 @@ export class ClubOnboardingFlow {
     return true
   }
   private apply(resume: ResumeSnapshot, extra: Partial<FlowState> = {}) {
-    this.remember({ sessionId: resume.sessionId, email: resume.email || this.email })
+    const paying = this.state.session?.paying
+    this.remember({ sessionId: resume.sessionId, email: resume.email || this.email, ...(paying ? { paying } : {}) })
     this.set({
-      resume, club: resume.club, screen: screenFromResume(resume), notVerified: false, resent: false,
+      resume, club: resume.club, screen: screenFromResume(resume, !!paying), notVerified: false, resent: false,
       selectedPlan: resume.selectedPlanCode ?? this.state.selectedPlan, ...extra,
     })
   }
@@ -224,10 +225,14 @@ export class ClubOnboardingFlow {
         if (failureOf(error) === 'not-found') this.forget(); else this.set({ notice: 'plan' })
         return
       }
-      if (code === 'FREE') { this.set({ screen: 'venue' }); return }
+      if (code === 'FREE') {
+        if (this.state.session?.paying) this.remember({ sessionId: this.sessionId, email: this.email })
+        this.set({ screen: 'venue' }); return
+      }
       try {
         const url = this.deps.checkoutUrl((await this.deps.api.checkout(this.sessionId)).url)
         if (!url) { this.set({ notice: 'checkout' }); return }
+        this.remember({ sessionId: this.sessionId, email: this.email, paying: true })
         this.set({ screen: 'payment-pending' })
         this.deps.openCheckout(url)
       } catch { this.set({ notice: 'checkout' }) }
@@ -239,14 +244,19 @@ export class ClubOnboardingFlow {
       try {
         const resume = await this.deps.api.resumeBySession(this.sessionId)
         const screen = paymentScreen(resume) ?? 'payment-pending'
-        this.remember({ sessionId: resume.sessionId, email: resume.email || this.email })
+        this.remember({ sessionId: resume.sessionId, email: resume.email || this.email, paying: true })
         this.set({ resume, club: resume.club ?? this.state.club, selectedPlan: resume.selectedPlanCode ?? this.state.selectedPlan, screen })
       } catch (error) {
         if (failureOf(error) === 'not-found') this.forget(); else this.set({ notice: 'payment-check' })
       }
     })
   }
-  goVenue() { if (!this.locked) this.set({ screen: 'venue', notice: null }) }
+  goVenue() {
+    if (this.locked) return
+    const session = this.state.session
+    if (session?.paying) this.remember({ sessionId: session.sessionId, email: session.email })
+    this.set({ screen: 'venue', notice: null })
+  }
   backToPlan() { if (!this.locked) this.set({ screen: 'plan', notice: null }) }
 
   async completeVenue(venue: { name: string; location: LocationBody }, courts: string[]) {

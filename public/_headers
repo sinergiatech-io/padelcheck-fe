@@ -4,3 +4,8 @@
 /forgot-password
   Referrer-Policy: no-referrer
   Cache-Control: no-store
+/billing/return
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+/.well-known/apple-app-site-association
+  Content-Type: application/json

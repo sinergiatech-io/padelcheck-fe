@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { isLocalEnvironment, resolveApiBase } from './src/lib/api-config'
+import { checkoutReturnLinks } from './checkout-return-links'
 
 export default defineConfig(({ command, mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env }
@@ -12,7 +13,7 @@ export default defineConfig(({ command, mode }) => {
     '/api',
   )
   return {
-    plugins: [react()],
+    plugins: [react(), checkoutReturnLinks(env.VITE_ANDROID_APP_LINK_SHA256, env.VITE_IOS_APP_LINK_ID)],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider } from 'react-router-dom'
 import { CategoryPolicyPage } from '@/features/club/category-policy/CategoryPolicyPage'
 import { ClubVenuesPage, MyClubPage } from '@/features/club/venues/ClubVenuesPage'
@@ -17,7 +18,7 @@ import { acceptedReturnPath } from '@/features/auth/access-destination'
 import { ContinuePage } from '@/features/auth/pages/ContinuePage'
 import { RecoveryPage } from '@/features/auth/pages/RecoveryPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
-import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { ClubRegisterPage } from '@/features/club-onboarding/ClubRegisterPage'
 import { PlayerRegisterPage } from '@/features/auth/pages/PlayerRegisterPage'
 import { SessionUnverifiedPage } from '@/features/auth/pages/SessionUnverifiedPage'
 import { MyTournamentsPage } from '@/features/app/my-tournaments/pages/MyTournamentsPage'
@@ -76,6 +77,26 @@ function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
   return <StartupReady>{children}</StartupReady>
 }
 
+/** Club wizard entry: anonymous visitors and PENDING club admins stay; every other authenticated user goes to their destination. */
+function ClubRegisterGate() {
+  const { isAuthenticated, isLoading, destination, phase, user } = useAuth()
+  const settled = useRef(false)
+  if (phase === 'unverified') return <SessionUnverifiedPage />
+  if (isLoading && !settled.current) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#120F18]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#C9CF38] border-t-transparent" />
+      </div>
+    )
+  }
+  if (isAuthenticated && user?.platformRole === 'SUPER_ADMIN') return <Navigate to="/owner" replace />
+  const pending = isAuthenticated && destination?.kind === 'continue' && destination.reason === 'pending-setup'
+  if (isAuthenticated && destination && !pending && !settled.current) {
+    return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
+  }
+  settled.current = true
+  return <StartupReady><ClubRegisterPage bearer={pending} /></StartupReady>
+}
 const router = createBrowserRouter(createRoutesFromElements(
       <Route errorElement={<StartupRouteError />}>
         <Route path="/billing/return" element={<StartupReady><CheckoutReturnPage /></StartupReady>} />
@@ -100,19 +121,16 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route path={ROUTES.authContinue} element={<ContinueRoute />} />
         <Route path="/register/player" element={<RedirectIfAuthenticated><PlayerRegisterPage /></RedirectIfAuthenticated>} />
         <Route path="/register/player/verify" element={<StartupReady><PlayerRegisterPage /></StartupReady>} />
+        <Route path={ROUTES.registerClub} element={<ClubRegisterGate />} />
+        <Route path={`${ROUTES.registerClub}/verify`} element={<StartupReady><ClubRegisterPage /></StartupReady>} />
+        <Route path={`/verify`} element={<StartupReady><ClubRegisterPage /></StartupReady>} />
         <Route element={<PublicLayout />}>
           <Route path={ROUTES.home} element={<StartupReady><LandingPage /></StartupReady>} />
           <Route path={ROUTES.designSystem} element={<StartupReady><DesignSystemPage /></StartupReady>} />
           <Route path={ROUTES.pricing} element={<StartupReady><PricingPage /></StartupReady>} />
           <Route path={ROUTES.faq} element={<StartupReady><FaqPage /></StartupReady>} />
-          <Route
-            path={ROUTES.register}
-            element={
-              <RedirectIfAuthenticated>
-                <RegisterPage />
-              </RedirectIfAuthenticated>
-            }
-          />
+          <Route path={ROUTES.register} element={<Navigate to={ROUTES.registerClub} replace />} />
+
         </Route>
 
         <Route

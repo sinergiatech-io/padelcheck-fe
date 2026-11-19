@@ -9,6 +9,7 @@ export const ROUTES = {
   login: '/login',
   authContinue: '/auth/continue',
   register: '/register',
+  registerClub: '/register/club',
   app: '/app',
   dashboard: '/app',
   events: '/app/events',

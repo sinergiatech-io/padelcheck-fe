@@ -15,6 +15,7 @@ import { AUTH_COPY, loginErrorMessage, type LoginNotice } from '@/features/auth/
 import { AuthScreen } from '@/features/auth/components/AuthScreen'
 import { LoginBanner } from '@/features/auth/components/LoginBanner'
 import { useAuth } from '@/context/AuthContext'
+import { ROUTES } from '@/lib/constants'
 import { consumeLoginNotice } from '@/features/auth/login-notice'
 import { Input } from '@/components/ui/input'
 import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
@@ -197,7 +198,7 @@ export function LoginPage() {
         </button>
         <button
           type="button"
-          disabled
+          onClick={() => navigate(ROUTES.registerClub + (searchParams.get('returnUrl') ? `?returnUrl=${encodeURIComponent(searchParams.get('returnUrl')!)}` : ''))}
           className="flex h-12 items-center justify-center gap-2 rounded-md border border-[#929195] pl-2 pr-4 text-sm font-medium leading-normal text-[#120F18] disabled:opacity-100"
         >
           <img src={clubIcon} alt="" width={20} height={20.5} className="h-[20.5px] w-5" />

@@ -4,8 +4,14 @@ import { API_BASE } from '@/lib/constants'
 import { RegistrationLocation, type PositionProvider } from './registration-location'
 
 const api = createApiClient({ baseUrl: API_BASE, getToken: () => null })
-export function useRegistrationLocation(provider: PositionProvider, enabled: boolean) {
-  const [model] = useState(() => new RegistrationLocation(api, provider))
+type Initial = Parameters<RegistrationLocation['preset']>[0]
+/** `initial` seeds a saved location once (club resume / venue preload); GPS detection is skipped when it is present. */
+export function useRegistrationLocation(provider: PositionProvider, enabled: boolean, initial?: Initial) {
+  const [model] = useState(() => {
+    const created = new RegistrationLocation(api, provider)
+    if (initial) created.preset(initial)
+    return created
+  })
   const state = useSyncExternalStore(model.subscribe, () => model.state)
   useEffect(() => {
     if (enabled) void model.initialize()

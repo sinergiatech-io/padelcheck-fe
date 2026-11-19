@@ -18,7 +18,12 @@ export function useClubOnboarding() {
     api: createOnboardingApi(publicClient, apiClient),
     store: browserStore(),
     platform: 'WEB',
-    checkoutUrl: url => providerUrl(url),
+    checkoutUrl: url => {
+      // The local checkout fixture is only available over HTTP in development.
+      if (import.meta.env.DEV && typeof url === 'string'
+        && /^http:\/\/127\.0\.0\.1:18098\/checkout\/[A-Za-z0-9_-]+$/.test(url)) return url
+      return providerUrl(url)
+    },
     openCheckout: url => window.location.assign(url),
     parseOffers: value => parseOffers(value),
   }))

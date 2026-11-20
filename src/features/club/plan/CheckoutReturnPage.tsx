@@ -1,3 +1,4 @@
+import { readGoogleClubDraft } from '@/features/club-onboarding/google-club-draft'
 import { Link } from 'react-router-dom'
 
 export function CheckoutReturnPage() {
@@ -9,7 +10,7 @@ export function CheckoutReturnPage() {
         <a className="block rounded-xl bg-[#c9cf38] px-4 py-3 text-center font-medium" href="padelcheck://billing/return">
           Abrir PadelCheck
         </a>
-        <Link className="block px-4 py-2 text-center text-sm font-medium underline" to="/club/plan">
+        <Link className="block px-4 py-2 text-center text-sm font-medium underline" to={readGoogleClubDraft() ? "/register/club" : "/club/plan"}>
           Continuar en el navegador
         </Link>
       </section>

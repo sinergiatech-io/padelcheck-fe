@@ -128,6 +128,9 @@ export function AppTopbar({ onOpenSidebar }: AppTopbarProps) {
             )}
           >
             <div className="border-b border-divider px-3 py-2 text-caption text-dark-700">{user?.email}</div>
+            <Button type="button" variant="ghost" className="h-auto w-full justify-start rounded-none px-3 py-2" onClick={() => { setOpen(false); navigate("/auth/continue?account=1", { state: { fromAccountMenu: true } }) }}>
+              Mi cuenta
+            </Button>
             <Button
               type="button"
               variant="ghost"

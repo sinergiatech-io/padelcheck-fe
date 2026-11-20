@@ -63,6 +63,12 @@ export function GoogleProviderButton({
   useEffect(() => {
     const node = container.current
     if (!clientId || !node) return
+    const referrer = document.querySelector<HTMLMetaElement>('meta[name="referrer"]')
+    // Google's iframe needs the origin. Keep the stricter policy on proof and payment routes.
+    const path = window.location.pathname.replace(/\/+$/, '')
+    const isGoogleEntry = ['/login', '/register/player', '/register/club'].includes(path)
+    const restorePrivateReferrer = isGoogleEntry && referrer?.content === 'no-referrer'
+    if (restorePrivateReferrer) referrer.content = 'strict-origin'
     const state = crypto.randomUUID()
     let current = true
     let clicked = false
@@ -112,6 +118,7 @@ export function GoogleProviderButton({
       window.clearTimeout(timer)
       observer?.disconnect()
       node.replaceChildren()
+      if (restorePrivateReferrer) referrer.content = 'no-referrer'
     }
   }, [clientId, attempt])
 

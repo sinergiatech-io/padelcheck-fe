@@ -1,3 +1,9 @@
+/login
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+/register/player
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+/register/club
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
 /reset-password
   Referrer-Policy: no-referrer
   Cache-Control: no-store

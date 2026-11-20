@@ -7,7 +7,9 @@ interface Credential {
 }
 
 interface GoogleIdentity {
-  initialize(config: { client_id: string; callback: (response: Credential) => void; ux_mode: 'popup' }): void
+  initialize(config: {
+    client_id: string; callback: (response: Credential) => void; ux_mode: 'popup'; use_fedcm_for_button: boolean
+  }): void
   renderButton(node: HTMLElement, config: {
     theme: 'outline'; size: 'large'; text: 'continue_with'; shape: 'rectangular'; width: number; locale: string
     state: string; click_listener: () => void
@@ -72,6 +74,7 @@ export function GoogleProviderButton({
     const state = crypto.randomUUID()
     let current = true
     let clicked = false
+    let received = false
     let timer: number | undefined
     let observer: ResizeObserver | undefined
     void loadIdentity().then(identity => {
@@ -79,11 +82,15 @@ export function GoogleProviderButton({
       identity.initialize({
         client_id: clientId,
         ux_mode: 'popup',
+        use_fedcm_for_button: true,
         callback: response => {
-          if (!current || !clicked || inactive.current || response.state !== state || !response.credential) return
+          if (!current || received || inactive.current || !response.credential) return
+          if (response.state !== undefined && response.state !== state) return
+          received = true
           clicked = false
           window.clearTimeout(timer)
           setWaiting(false)
+          setFailed(false)
           listener.current(response.credential)
         },
       })
@@ -98,6 +105,7 @@ export function GoogleProviderButton({
           state,
           click_listener: () => {
             if (inactive.current || clicked) return
+            received = false
             clicked = true
             setWaiting(true)
             timer = window.setTimeout(() => {
@@ -123,14 +131,14 @@ export function GoogleProviderButton({
   }, [clientId, attempt])
 
   useEffect(() => {
-    if (container.current) container.current.inert = disabled || waiting || failed
-  }, [disabled, waiting, failed])
+    if (container.current) container.current.inert = disabled || failed
+  }, [disabled, failed])
 
   if (!clientId) return null
   return (
     <div className="flex w-full flex-col gap-2">
       <div ref={container} className="min-h-10 w-full" />
-      {waiting && <p role="status" className="text-sm text-[#605E64]">Completá el acceso en la ventana de Google.</p>}
+      {waiting && <p role="status" className="text-sm text-[#605E64]">Completá el acceso en el selector de Google.</p>}
       {(failed || waiting) && (
         <button type="button" className="min-h-11 self-start text-sm font-medium underline" onClick={() => {
           setFailed(false)

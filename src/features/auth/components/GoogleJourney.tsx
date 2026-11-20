@@ -19,6 +19,7 @@ import { rememberGoogleClubDraft } from '@/features/club-onboarding/google-club-
 import person from '@/assets/auth/person.svg?url'
 import club from '@/assets/auth/club.svg?url'
 import chevron from '@/assets/auth/register-chevron.svg?url'
+import spinner from '@/assets/ui/button-spinner.svg?url'
 
 const unauthenticated = createApiClient({ baseUrl: API_BASE, getToken: () => null })
 
@@ -37,6 +38,9 @@ interface JourneyState {
 }
 
 function errorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.kind === 'timeout') {
+    return 'La validación tardó demasiado. Volvé a intentar en unos momentos.'
+  }
   switch (error instanceof ApiError ? error.code : undefined) {
     case 'AUTH_EMAIL_OWNERSHIP_EXPIRED': return 'El enlace venció. Volvé al acceso para solicitar otro.'
     case 'AUTH_EMAIL_OWNERSHIP_USED': return 'Este enlace ya se usó. Volvé al acceso para continuar.'
@@ -183,7 +187,7 @@ function GoogleJourneyScreen({ journey, onClose }: { journey: Journey; onClose: 
     if (continuation) run(signal => resolveGoogleContinuation(continuation.token, { action }, signal))
   }
   const emailSent = continuation?.progress.allowedActions.includes('CONFIRM_EMAIL_OWNERSHIP')
-  let title = success ?? (busy ? 'Validando tu acceso' : error ? 'No pudimos continuar' : 'Enlace no disponible')
+  let title = success ?? (busy ? 'Estamos validando tu acceso…' : error ? 'No pudimos continuar' : 'Enlace no disponible')
   let detail: string | undefined
   let primary = success && response ? { label: 'Continuar', action: () => proceed(response) } : undefined
   if (continuation?.purpose === 'LINK_GOOGLE_ACCOUNT') {
@@ -207,9 +211,18 @@ function GoogleJourneyScreen({ journey, onClose }: { journey: Journey; onClose: 
     if (reviewProfile) primary = { label: 'Completar datos deportivos', action: () => setShowPlayerFields(true) }
   }
   useEffect(() => { heading.current?.focus() }, [title])
+  const validating = busy && !continuation && !primary
 
   return <AuthScreen identity>
     <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold leading-8 outline-none">{title}</h1>
+    {validating && <>
+      <div className="mt-5"><RegistrationBanner title="Comprobando tu identidad"
+        detail="Esperá un momento. No hace falta iniciar el acceso otra vez." tone="info" clock /></div>
+      <div className="flex min-h-28 flex-1 items-center justify-center">
+        <img src={spinner} alt="" width={40} height={40}
+          className="animate-spin [animation-duration:800ms] motion-reduce:animate-none" />
+      </div>
+    </>}
     {detail && <p className="mt-4 text-base leading-6 text-[#605E64]">{detail}</p>}
     {error && <p role="alert" className="mt-4 rounded-lg border border-[#FAC5C5] bg-[#FDECEC] p-3 text-sm text-[#AA3030]">{error}</p>}
     {reviewProfile && <>
@@ -240,11 +253,10 @@ function GoogleJourneyScreen({ journey, onClose }: { journey: Journey; onClose: 
       <GooglePlayerFields key={profile.token} progress={profile.progress} busy={busy} onBack={() => setShowPlayerFields(false)} submit={(gender, category) =>
         run(signal => resolveGoogleContinuation(profile.token, { action: 'COMPLETE_PLAYER_PROFILE', gender, baseCategoryId: category }, signal))} />
     </div>}
-    {(!profile || reviewProfile) && <div className="mt-auto flex flex-col gap-2 pt-8">
+    {!validating && (!profile || reviewProfile) && <div className="mt-auto flex flex-col gap-2 pt-8">
       {primary && <Button type="button" disabled={busy} className="h-12" onClick={primary.action}>
         <ButtonLoadingContent loading={busy}>{primary.label}</ButtonLoadingContent>
       </Button>}
-      {!primary && !continuation && busy && <p role="status">Validando…</p>}
       {!primary && !continuation && error && retry && <Button type="button" className="h-12" onClick={retry}>Reintentar</Button>}
       <Button type="button" variant="secondary" className="h-12" onClick={onClose}>{profile ? 'Volver' : 'Volver al acceso'}</Button>
     </div>}

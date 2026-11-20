@@ -58,9 +58,10 @@ interface ExchangeRequest {
 }
 
 const identityClient = createApiClient({ baseUrl: API_BASE, getToken: () => null })
+const validationTimeoutMs = 120_000
 
 export function exchangeGoogleIdentity(request: ExchangeRequest, signal?: AbortSignal) {
-  return identityClient.post<GoogleAuthResponse>('/auth/google', { ...request, platform: 'WEB' }, { signal })
+  return identityClient.post<GoogleAuthResponse>('/auth/google', { ...request, platform: 'WEB' }, { signal, timeoutMs: validationTimeoutMs })
 }
 
 export function resolveGoogleContinuation(token: string, request: ContinuationRequest, signal?: AbortSignal) {
@@ -68,7 +69,7 @@ export function resolveGoogleContinuation(token: string, request: ContinuationRe
 }
 
 export function confirmGoogleEmail(token: string, signal?: AbortSignal) {
-  return identityClient.post<GoogleAuthResponse>('/auth/continuations/confirm-email', { token }, { signal })
+  return identityClient.post<GoogleAuthResponse>('/auth/continuations/confirm-email', { token }, { signal, timeoutMs: validationTimeoutMs })
 }
 
 type AddActivityRequest =

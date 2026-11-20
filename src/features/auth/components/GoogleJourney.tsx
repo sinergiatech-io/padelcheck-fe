@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
 import { AuthScreen } from './AuthScreen'
 import { GoogleProviderButton } from './GoogleProviderButton'
+import { RegistrationBanner } from './RegistrationShell'
 import {
   addAccountActivity, confirmGoogleEmail, exchangeGoogleIdentity, resolveGoogleContinuation,
   type AccessActivity, type GoogleAuthResponse, type GoogleContinuation,
@@ -173,6 +174,10 @@ export function GoogleVerifyEmailPage() {
 function GoogleJourneyScreen({ journey, onClose }: { journey: Journey; onClose: () => void }) {
   const { state: { response, busy, error, success }, run, proceed, retry } = journey
   const continuation = !success && response?.outcome === 'CONTINUATION' ? response.continuation : undefined
+  const profile = continuation?.purpose === 'COMPLETE_PLAYER_PROFILE' ? continuation : undefined
+  const [showPlayerFields, setShowPlayerFields] = useState(false)
+  const playerName = [profile?.progress.givenName, profile?.progress.familyName].filter(Boolean).join(' ')
+  const reviewProfile = !!profile && !showPlayerFields
   const heading = useRef<HTMLHeadingElement>(null)
   const send = (action: 'SEND_EMAIL_OWNERSHIP' | 'LINK_GOOGLE_ACCOUNT') => {
     if (continuation) run(signal => resolveGoogleContinuation(continuation.token, { action }, signal))
@@ -196,9 +201,10 @@ function GoogleJourneyScreen({ journey, onClose }: { journey: Journey; onClose: 
     title = 'Elegí tu perfil'
     detail = 'Seleccioná la opción que mejor te represente'
   }
-  if (continuation?.purpose === 'COMPLETE_PLAYER_PROFILE') {
-    title = 'Completá tu perfil'
-    detail = 'Completá los datos que faltan para empezar a jugar.'
+  if (profile) {
+    title = reviewProfile ? 'Completá tu perfil de jugador' : 'Completá tus datos deportivos'
+    detail = reviewProfile ? 'Faltan tus datos deportivos para completar el registro.' : undefined
+    if (reviewProfile) primary = { label: 'Completar datos deportivos', action: () => setShowPlayerFields(true) }
   }
   useEffect(() => { heading.current?.focus() }, [title])
 
@@ -206,7 +212,11 @@ function GoogleJourneyScreen({ journey, onClose }: { journey: Journey; onClose: 
     <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold leading-8 outline-none">{title}</h1>
     {detail && <p className="mt-4 text-base leading-6 text-[#605E64]">{detail}</p>}
     {error && <p role="alert" className="mt-4 rounded-lg border border-[#FAC5C5] bg-[#FDECEC] p-3 text-sm text-[#AA3030]">{error}</p>}
-    {continuation?.progress.emailHint && <div className="mt-5 rounded-lg border border-[#BED4FF] bg-[#EAF1FB] p-3 text-sm">
+    {reviewProfile && <>
+      <div className="mt-5"><RegistrationBanner title="Identidad confirmada" detail={profile.progress.emailHint ?? undefined} tone="success" /></div>
+      <p className="mt-5 text-base leading-6 text-[#605E64]">Usamos únicamente tus datos guardados. Revisá tu nombre, rama y categoría en el siguiente paso.</p>
+    </>}
+    {!profile && continuation?.progress.emailHint && <div className="mt-5 rounded-lg border border-[#BED4FF] bg-[#EAF1FB] p-3 text-sm">
       <p className="font-semibold">{continuation.purpose === 'LINK_GOOGLE_ACCOUNT' ? 'Mismo email acreditado' : 'Un paso para cuidar tu cuenta'}</p>
       <p className="mt-1 text-xs text-[#605E64]">{continuation.progress.emailHint}</p>
     </div>}
@@ -222,17 +232,22 @@ function GoogleJourneyScreen({ journey, onClose }: { journey: Journey; onClose: 
             <img className="-rotate-90" src={chevron} alt="" width={20} height={20} />
           </button>)}
     </div>}
-    {continuation?.purpose === 'COMPLETE_PLAYER_PROFILE' && <GooglePlayerFields key={continuation.token}
-      progress={continuation.progress} busy={busy} submit={(gender, category) =>
-        run(signal => resolveGoogleContinuation(continuation.token, { action: 'COMPLETE_PLAYER_PROFILE', gender, baseCategoryId: category }, signal))} />}
-    <div className="mt-auto flex flex-col gap-2 pt-8">
+    {profile && <div className={showPlayerFields ? 'flex flex-1 flex-col' : 'hidden'}>
+      {playerName && <dl className="mt-6 rounded-lg border border-[#E7E7E8] bg-[#F7F7F7] p-3">
+        <dt className="text-sm font-medium text-[#605E64]">Nombre y apellido</dt>
+        <dd className="mt-1 break-words text-base font-medium">{playerName}</dd>
+      </dl>}
+      <GooglePlayerFields key={profile.token} progress={profile.progress} busy={busy} onBack={() => setShowPlayerFields(false)} submit={(gender, category) =>
+        run(signal => resolveGoogleContinuation(profile.token, { action: 'COMPLETE_PLAYER_PROFILE', gender, baseCategoryId: category }, signal))} />
+    </div>}
+    {(!profile || reviewProfile) && <div className="mt-auto flex flex-col gap-2 pt-8">
       {primary && <Button type="button" disabled={busy} className="h-12" onClick={primary.action}>
         <ButtonLoadingContent loading={busy}>{primary.label}</ButtonLoadingContent>
       </Button>}
       {!primary && !continuation && busy && <p role="status">Validando…</p>}
       {!primary && !continuation && error && retry && <Button type="button" className="h-12" onClick={retry}>Reintentar</Button>}
-      <Button type="button" variant="secondary" className="h-12" onClick={onClose}>Volver al acceso</Button>
-    </div>
+      <Button type="button" variant="secondary" className="h-12" onClick={onClose}>{profile ? 'Volver' : 'Volver al acceso'}</Button>
+    </div>}
   </AuthScreen>
 }
 
@@ -255,9 +270,10 @@ export function useAddClubActivity() {
   return { ...journey.state, addClub: () => journey.run(signal => addAccountActivity({ activity: 'CLUB' }, signal)) }
 }
 
-function GooglePlayerFields({ progress, busy, submit }: {
+function GooglePlayerFields({ progress, busy, submit, onBack }: {
   progress: Pick<GoogleContinuation['progress'], 'gender' | 'baseCategoryId'>; busy: boolean
   submit: (gender: Gender, category: string) => void
+  onBack?: () => void
 }) {
   const [gender, setGender] = useState<'' | 'MALE' | 'FEMALE'>(progress.gender ?? '')
   const [category, setCategory] = useState(progress.baseCategoryId ?? '')
@@ -275,18 +291,20 @@ function GooglePlayerFields({ progress, busy, submit }: {
     return () => controller.abort()
   }, [progress.baseCategoryId, attempt])
 
-  return <form className="mt-6 flex flex-col gap-4" onSubmit={event => {
+  return <form className="mt-6 flex flex-1 flex-col gap-4" onSubmit={event => {
     event.preventDefault()
     if (gender && category) submit(gender, category)
   }}>
     {!progress.gender && <label className="grid gap-2 text-sm font-medium">
-      Sexo<select className="h-14 rounded-lg border border-[#929195] bg-white p-4" required value={gender}
+      <span>Sexo <span aria-hidden="true" className="text-[#EF4444]">*</span></span>
+      <select className="h-14 rounded-lg border border-[#929195] bg-white p-4" required value={gender}
         onChange={event => setGender(event.target.value === 'MALE' || event.target.value === 'FEMALE' ? event.target.value : '')}>
         <option value="">Seleccioná tu sexo</option><option value="MALE">Caballeros</option><option value="FEMALE">Damas</option>
       </select>
     </label>}
     {!progress.baseCategoryId && <label className="grid gap-2 text-sm font-medium">
-      Categoría<select className="h-14 rounded-lg border border-[#929195] bg-white p-4" required value={category}
+      <span>Categoría <span aria-hidden="true" className="text-[#EF4444]">*</span></span>
+      <select className="h-14 rounded-lg border border-[#929195] bg-white p-4" required value={category}
         onChange={event => setCategory(event.target.value)} disabled={!categories.length}>
         <option value="">{categories.length ? 'Seleccioná tu categoría' : 'Cargando categorías…'}</option>
         {categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -296,8 +314,11 @@ function GooglePlayerFields({ progress, busy, submit }: {
       setCatalogError(false)
       setAttempt(value => value + 1)
     }}>Reintentar la carga de categorías</button>}
-    <Button type="submit" className="h-12" disabled={busy || !gender || !category}>
-      <ButtonLoadingContent loading={busy}>Continuar</ButtonLoadingContent>
-    </Button>
+    <div className="mt-auto flex flex-col gap-2">
+      <Button type="submit" className="h-12" disabled={busy || !gender || !category}>
+        <ButtonLoadingContent loading={busy}>Continuar</ButtonLoadingContent>
+      </Button>
+      {onBack && <Button type="button" variant="secondary" disabled={busy} className="h-12" onClick={onBack}>Volver</Button>}
+    </div>
   </form>
 }

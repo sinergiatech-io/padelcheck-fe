@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider, useSearchParams } from 'react-router-dom'
 import { CategoryPolicyPage } from '@/features/club/category-policy/CategoryPolicyPage'
 import { ClubVenuesPage, MyClubPage } from '@/features/club/venues/ClubVenuesPage'
 import { ClubPlanPage } from '@/features/club/plan/ClubPlanPage'
@@ -15,6 +15,8 @@ import { LandingPage } from '@/features/public/landing/pages/LandingPage'
 import { PricingPage } from '@/features/public/pricing/pages/PricingPage'
 import { FaqPage } from '@/features/public/faq/pages/FaqPage'
 import { acceptedReturnPath } from '@/features/auth/access-destination'
+import { GoogleVerifyEmailPage } from '@/features/auth/components/GoogleJourney'
+import { readGoogleClubDraft } from '@/features/club-onboarding/google-club-draft'
 import { ContinuePage } from '@/features/auth/pages/ContinuePage'
 import { RecoveryPage } from '@/features/auth/pages/RecoveryPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -42,6 +44,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { StartupReady, StartupRouteError } from '@/features/startup/StartupReady'
 
 function ContinueRoute() {
+  const [params] = useSearchParams()
   const { phase, destination } = useAuth()
   if (phase === 'checking') {
     return (
@@ -52,7 +55,7 @@ function ContinueRoute() {
   }
   if (phase === 'unverified') return <SessionUnverifiedPage />
   if (phase !== 'ready' || !destination) return <Navigate to={ROUTES.login} replace />
-  if (destination.kind !== 'continue') {
+  if (destination.kind !== 'continue' && params.get('account') !== '1') {
     return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
   }
   return <StartupReady><ContinuePage /></StartupReady>
@@ -91,7 +94,7 @@ function ClubRegisterGate() {
   }
   if (isAuthenticated && user?.platformRole === 'SUPER_ADMIN') return <Navigate to="/owner" replace />
   const pending = isAuthenticated && destination?.kind === 'continue' && destination.reason === 'pending-setup'
-  if (isAuthenticated && destination && !pending && !settled.current) {
+  if (isAuthenticated && destination && !pending && !settled.current && !readGoogleClubDraft()) {
     return <Navigate to={acceptedReturnPath('web', destination, null)} replace />
   }
   settled.current = true
@@ -118,6 +121,7 @@ const router = createBrowserRouter(createRoutesFromElements(
         />
         <Route path="/forgot-password" element={<StartupReady><RecoveryPage /></StartupReady>} />
         <Route path="/reset-password" element={<StartupReady><RecoveryPage reset /></StartupReady>} />
+        <Route path="/auth/google/verify-email" element={<StartupReady><GoogleVerifyEmailPage /></StartupReady>} />
         <Route path={ROUTES.authContinue} element={<ContinueRoute />} />
         <Route path="/register/player" element={<RedirectIfAuthenticated><PlayerRegisterPage /></RedirectIfAuthenticated>} />
         <Route path="/register/player/verify" element={<StartupReady><PlayerRegisterPage /></StartupReady>} />

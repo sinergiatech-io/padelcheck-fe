@@ -2,6 +2,7 @@ import { useState, type Ref } from 'react'
 import { Link } from 'react-router-dom'
 import eye from '@/assets/auth/eye.svg?url'
 import eyeOn from '@/assets/auth/eye-on.svg?url'
+import { GoogleEntry } from '@/features/auth/components/GoogleJourney'
 import { RegistrationBanner } from '@/features/auth/components/RegistrationShell'
 import { NOTICE_COPY, type ClubOnboardingFlow, type FlowState } from './flow'
 import { emptyAccount, validateAccount, type AccountDraft } from './model'
@@ -31,6 +32,7 @@ export function AccountStep({ flow, state, titleRef, loginPath }: { flow: ClubOn
   }
   return <StepFrame as="form" onSubmit={submit} footer={<PrimaryButton type="submit" label={state.notice === 'account' ? 'Reintentar' : 'Crear cuenta'} loading={busy} />}>
     <StepHeading step="Paso 1 de 5" title="Tu club empieza acá" subtitle="Creá tu cuenta para empezar a organizar tus torneos" titleRef={titleRef} />
+    <GoogleEntry intent="CLUB" returnPath={new URLSearchParams(loginPath.split("?")[1]).get("returnUrl")} disabled={busy} />
     {state.notice === 'account' && <RegistrationBanner tone="error" title={NOTICE_COPY.account.title} detail={NOTICE_COPY.account.detail} />}
     <div className="flex flex-col gap-4">
       <TextField id="firstName" label="Nombre" required value={draft.firstName} onChange={set('firstName')} error={fieldError('firstName')} disabled={busy} maxLength={100} autoComplete="given-name" placeholder="Tu nombre" />

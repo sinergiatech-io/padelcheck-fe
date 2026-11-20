@@ -6,13 +6,11 @@ import { z } from 'zod'
 import clubIcon from '@/assets/auth/club.svg?url'
 import eyeOffIcon from '@/assets/auth/eye.svg?url'
 import eyeOnIcon from '@/assets/auth/eye-on.svg?url'
-import googleLabel from '@/assets/auth/google-label.svg?url'
-import googleMark from '@/assets/auth/google-g.png'
 import personIcon from '@/assets/auth/person.svg?url'
 import { login as loginRequest } from '@/features/auth/api/login'
-import { acceptedReturnPath, resolveAccessDestination } from '@/features/auth/access-destination'
 import { AUTH_COPY, loginErrorMessage, type LoginNotice } from '@/features/auth/auth-copy'
 import { AuthScreen } from '@/features/auth/components/AuthScreen'
+import { GoogleEntry } from '@/features/auth/components/GoogleJourney'
 import { LoginBanner } from '@/features/auth/components/LoginBanner'
 import { useAuth } from '@/context/AuthContext'
 import { ROUTES } from '@/lib/constants'
@@ -34,7 +32,7 @@ const fieldErrorClass = 'border-[#EF4444]'
 const messageClass = 'text-right text-sm font-medium leading-5 text-[#AA3030]'
 
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, entryPath } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
@@ -64,12 +62,11 @@ export function LoginPage() {
       const data = await loginRequest(values)
       const accepted = login(data.accessToken, data.context, data.expiresIn)
       if (!accepted) return
-      const destination = resolveAccessDestination(data.context.accessContexts)
       if (data.context.platformRole === 'SUPER_ADMIN') {
         navigate('/owner', { replace: true })
         return
       }
-      navigate(acceptedReturnPath('web', destination, searchParams.get('returnUrl')), { replace: true })
+      navigate(entryPath(data.context, searchParams.get('returnUrl')), { replace: true })
     } catch (error) {
       setFormError(loginErrorMessage(error))
     } finally {
@@ -123,9 +120,9 @@ export function LoginPage() {
               <FormItem className="flex flex-col gap-2 space-y-0">
                 <FormLabel className="text-sm font-medium leading-5 text-[#120F18]">Contraseña</FormLabel>
                 <div className="w-full">
-                <FormControl>
                   <div className="relative w-full">
-                    <Input
+                    <FormControl>
+                      <Input
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       placeholder="Ingresá tu contraseña"
@@ -135,7 +132,8 @@ export function LoginPage() {
                         releaseBlocked()
                         field.onChange(event)
                       }}
-                    />
+                      />
+                    </FormControl>
                     <button
                       type="button"
                       className="absolute right-4 top-1/2 -translate-y-1/2"
@@ -145,8 +143,7 @@ export function LoginPage() {
                       <img src={showPassword ? eyeOnIcon : eyeOffIcon} alt="" className="h-6 w-6" />
                     </button>
                   </div>
-                </FormControl>
-                <FormMessage className={messageClass} />
+                  <FormMessage className={messageClass} />
                 </div>
               </FormItem>
             )}
@@ -178,14 +175,7 @@ export function LoginPage() {
         <span className="text-base font-normal leading-6 text-[#605E64]">o</span>
         <span className="h-px flex-1 bg-[#B6B5B7]" />
       </div>
-      <button
-        type="button"
-        aria-label="Continuar con Google"
-        className="mt-4 flex h-12 w-full items-center justify-center gap-2.5 rounded-md border border-[#747775] bg-white px-3"
-      >
-        <img src={googleMark} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
-        <img src={googleLabel} alt="" width={142.674} height={13.496} />
-      </button>
+      <div className="mt-4"><GoogleEntry returnPath={searchParams.get('returnUrl')} disabled={submitting} /></div>
       <p className="mt-4 text-base leading-6 text-[#605E64]">¿No tenés cuenta? Registrate como</p>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <button

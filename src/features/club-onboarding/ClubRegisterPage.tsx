@@ -10,6 +10,7 @@ import { PlanStep } from './PlanStep'
 import { StatusStep } from './StatusStep'
 import { useClubOnboarding } from './use-club-onboarding'
 import { VenueStep } from './VenueStep'
+import { clearGoogleClubDraft, readGoogleClubDraft } from './google-club-draft'
 
 /** `bearer`: an authenticated club admin whose setup is still PENDING resumes by session, not by the stored id. */
 export function ClubRegisterPage({ bearer = false }: { bearer?: boolean }) {
@@ -17,7 +18,8 @@ export function ClubRegisterPage({ bearer = false }: { bearer?: boolean }) {
   const location = useLocation()
   const [params] = useSearchParams()
   const { isAuthenticated, retryValidation } = useAuth()
-  const { flow, state } = useClubOnboarding()
+  const [googleDraft] = useState(() => !location.pathname.endsWith('/verify') ? readGoogleClubDraft() : undefined)
+  const { flow, state } = useClubOnboarding(googleDraft)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const [proof] = useState<Proof | undefined>(() => {
     if (!location.pathname.endsWith('/verify')) return undefined
@@ -28,13 +30,14 @@ export function ClubRegisterPage({ bearer = false }: { bearer?: boolean }) {
     // The one-time token never stays in the address bar, history or a reload.
     if (location.pathname.endsWith('/verify')) window.history.replaceState(null, '', ROUTES.registerClub)
   }, [location.pathname])
-  useEffect(() => { void flow.init({ proof, bearer }) }, [flow, proof, bearer])
+  useEffect(() => { void flow.init({ proof, bearer, googleSessionId: googleDraft?.sessionId }) }, [flow, proof, bearer, googleDraft])
   useEffect(() => { if (state.screen !== 'loading') titleRef.current?.focus() }, [state.screen])
 
   const returnUrl = params.get('returnUrl')
   const loginPath = `/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
   const finish = () => {
     flow.finish()
+    if (googleDraft) clearGoogleClubDraft()
     if (isAuthenticated) {
       // The cached principal still says PENDING: revalidate, then the access gate chooses the dashboard.
       retryValidation()

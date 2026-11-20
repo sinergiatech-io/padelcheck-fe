@@ -18,11 +18,11 @@ export type BannerTone = keyof typeof tones
 const icons = { info, success, error, warning, neutral: error }
 
 /** Status banner shared by the player and club registration wizards. */
-const ClockIcon = () => <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#E8A317" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="8" /><path d="M10 5.5V10l3 2" /></svg>
+const ClockIcon = ({ color }: { color: string }) => <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="8" /><path d="M10 5.5V10l3 2" /></svg>
 
 export function RegistrationBanner({ title, detail, tone = 'error', role = 'status', clock = false }: { title: string; detail?: string; tone?: BannerTone; role?: 'status' | 'alert'; clock?: boolean }) {
   return <div role={role} className={`flex items-center gap-3 rounded-[8px] border p-3 ${tones[tone]}`}>
-    <div className="flex h-6 w-6 shrink-0 items-center justify-center">{clock ? <ClockIcon /> : <img src={icons[tone]} alt="" className={tone === 'neutral' ? 'opacity-60 grayscale' : undefined} />}</div>
+    <div className="flex h-6 w-6 shrink-0 items-center justify-center">{clock ? <ClockIcon color={tone === 'info' ? '#605E64' : '#E8A317'} /> : <img src={icons[tone]} alt="" className={tone === 'neutral' ? 'opacity-60 grayscale' : undefined} />}</div>
     <div><p className="text-sm font-semibold leading-5">{title}</p>{detail && <p className="mt-0.5 text-xs leading-4 text-[#605E64]">{detail}</p>}</div>
   </div>
 }

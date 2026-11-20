@@ -52,6 +52,7 @@ export class ClubOnboardingFlow {
   private started = false
   private proof: Proof | null = null
   private mode: 'bearer' | 'session' = 'session'
+  private googleSessionId?: string
   constructor(private deps: FlowDeps) {}
 
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
@@ -80,7 +81,7 @@ export class ClubOnboardingFlow {
   }
 
   /** Entry: verification link > admin bearer > stored session id > empty account form. Runs once (StrictMode-safe). */
-  async init(input: { proof?: Proof; bearer: boolean }) {
+  async init(input: { proof?: Proof; bearer: boolean; googleSessionId?: string }) {
     if (this.started) return
     this.started = true
     if (input.proof) { this.proof = input.proof; await this.verifyLink(); return }
@@ -100,7 +101,9 @@ export class ClubOnboardingFlow {
           if (reason !== 'not-found') { this.set({ screen: 'resume-error' }); return }
         }
       }
-      const stored = loadSession(this.deps.store)
+      const persisted = loadSession(this.deps.store)
+      const stored = this.googleSessionId && persisted?.sessionId !== this.googleSessionId
+        ? { sessionId: this.googleSessionId, email: "" } : persisted
       if (!stored) { this.set({ screen: 'account' }); return }
       this.set({ session: stored })
       try { this.apply(await this.deps.api.resumeBySession(stored.sessionId)) }

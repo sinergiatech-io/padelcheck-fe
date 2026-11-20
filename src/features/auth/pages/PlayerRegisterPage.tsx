@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { GoogleEntry } from '@/features/auth/components/GoogleJourney'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
@@ -62,6 +63,7 @@ export function PlayerRegisterPage() {
     }))
   }}>
     {heading('Creá tu cuenta de jugador', 'Completá tus datos y elegí tu categoría para empezar.')}
+    <GoogleEntry intent="PLAYER" returnPath={returnUrl} disabled={busy} />
     {notice && <Banner title={notice} detail="Intentá de nuevo." />}
     <div className="flex flex-col gap-3">
       {(['firstName', 'lastName', 'email', 'password', 'gender', 'baseCategoryId'] as const).map(key => {

@@ -216,13 +216,16 @@ function Profile({ clubId, playerId, accountId }: { clubId: string; playerId: st
     {footer && <div className="shrink-0 bg-[#f2f2f2] px-4 pb-6 pt-4">
       <div className="mx-auto flex max-w-xl gap-2.5">
         {(view === 'confirm-category' || view === 'remove') && <Button variant="secondary" className={`${button} flex-1`} disabled={saving} onClick={back}>Cancelar</Button>}
-        <Button className={`${button} flex-1`} loading={saving} loadingLabel={`${saveText} en curso`}
+        <Button className={`${button} flex-1 ${saving ? 'max-md:disabled:bg-[#eef0c1] max-md:disabled:opacity-100' : ''}`}
+          loading={saving} loadingLabel={`${saveText} en curso`}
           disabled={(view === 'category' || view === 'confirm-category') && !flow.validCategory}
           onClick={() => view === 'category' ? open('confirm-category') : void flow.save()}>{view === 'category' ? 'Continuar' : saveText}</Button>
       </div>
     </div>}
-    <ClubBottomNav selectedLabel="Jugadores" busy={saving} onDashboard={() => navigate('/app')} onClub={() => navigate('/club/settings')}
-      onPlayers={returnToList} />
+    <div className={saving ? 'max-md:opacity-[.38]' : undefined}>
+      <ClubBottomNav selectedLabel="Jugadores" busy={saving} onDashboard={() => navigate('/app')} onClub={() => navigate('/club/settings')}
+        onPlayers={returnToList} />
+    </div>
     <dialog ref={dialog} aria-labelledby="discard-title" onCancel={event => { event.preventDefault(); closeDiscard(false) }}
       className="w-[calc(100%-2rem)] max-w-sm rounded-xl bg-surface p-6 text-dark-900 backdrop:bg-black/40">
       <h2 id="discard-title" className="text-xl font-bold">¿Descartar los cambios?</h2>

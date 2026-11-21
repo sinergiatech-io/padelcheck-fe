@@ -202,20 +202,30 @@ export function TournamentResultsPage() {
   const { playerId = '', eventId = '', divisionId = '' } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const query = useTournamentResults(playerId, eventId, divisionId)
+  const active = new URLSearchParams(location.search).get('active') === '1'
+  const query = useTournamentResults(playerId, eventId, divisionId, active)
   const data = hideProfileOn(query.error) ? undefined : query.data
   return <>
-    <ProfileHeader title="Resultados oficiales" back={() => {
+    <ProfileHeader title={active ? 'Detalle del torneo' : 'Resultados oficiales'} back={() => {
       if (location.state?.fromHistory) navigate(-1)
+      else if (active) navigate('/app/my-tournaments', { replace: true })
       else navigate('/app/players/' + playerId + '/history', { replace: true })
     }} />
     <div className="mx-auto flex max-w-[560px] flex-col gap-3 pt-5">
       {query.isPending && <ProfileSkeleton />}
-      {query.isError && <ProfileError onRetry={() => { void query.refetch() }}>No pudimos cargar los resultados.</ProfileError>}
+      {query.isError && <ProfileError onRetry={() => { void query.refetch() }}>{active ? 'No pudimos cargar el torneo.' : 'No pudimos cargar los resultados.'}</ProfileError>}
       {data && <>
         <h2 className="text-lg font-semibold">{data.tournament}</h2>
         <p className="text-sm text-[#605e64]">{data.category}</p>
-        {!data.matches.length && <p className="text-sm">Resultado no disponible</p>}
+        {active && <section className="space-y-2 rounded-2xl border border-divider p-4 text-sm">
+          <p>{data.registration === 'WAITLIST' ? 'En lista de espera' : 'Inscripción confirmada'}</p>
+          <h3 className="font-semibold">Próximo partido</h3>
+          {data.nextMatch ? <>
+            <p>{new Date(data.nextMatch.startsAt).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Argentina/Buenos_Aires' })}</p>
+            <p>{data.nextMatch.venue} · {data.nextMatch.court}</p>
+          </> : <p>Todavía no hay un partido programado.</p>}
+        </section>}
+        {!active && !data.matches.length && <p className="text-sm">Resultado no disponible</p>}
         {data.matches.map(match => <article key={match.id} className="space-y-2 rounded-2xl border border-divider p-4 text-sm">
           <h3 className="font-semibold">{match.home} vs. {match.away}</h3>
           <p>{match.walkover ? 'Walkover' : match.sets.length ? match.sets.map(set => set.home + '–' + set.away).join(' · ') : 'Marcador no disponible'}</p>

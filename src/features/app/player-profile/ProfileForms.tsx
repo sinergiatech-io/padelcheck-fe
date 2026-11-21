@@ -243,7 +243,7 @@ export function SecurityPage({ changing = false }: { changing?: boolean }) {
     {own && (changing && own.hasLocalPassword ? <ChangePassword /> : <div className={formClass}>
       {location.state?.passwordSaved && <p role="status" className="rounded-lg bg-[#f8f9e9] p-3 text-sm">Contraseña actualizada</p>}
       <h2 className="text-xl font-semibold">Contraseña de PadelCheck</h2>
-      <p className="text-sm text-[#605e64]">{own.hasLocalPassword ? 'Podés cambiar tu contraseña desde esta cuenta.' : 'Te enviamos un enlace por email para crear tu contraseña.'}</p>
+      <p className="text-sm text-[#605e64]">{own.hasLocalPassword ? 'Podés cambiar tu contraseña desde esta cuenta.' : 'Usás Google para ingresar. Podés crear una contraseña con un enlace enviado a tu email.'}</p>
       <Button asChild className="h-10 w-full rounded-lg">
         <Link to={own.hasLocalPassword ? '/app/settings/security/password' : '/forgot-password'}>{own.hasLocalPassword ? 'Cambiar contraseña' : 'Crear contraseña'}</Link>
       </Button>

@@ -79,8 +79,11 @@ function CardBody({ tournament, variant }: MyTournamentCardProps) {
 
 export function MyTournamentCard({ tournament, variant }: MyTournamentCardProps) {
   if (variant === 'active') {
+    const path = tournament.playerId ? tournamentResultsPath(tournament.playerId, {
+      eventId: tournament.eventId, divisionId: tournament.categoryId,
+    }) + '?active=1' : myTournamentCategoryPath(tournament)
     return (
-      <Link to={myTournamentCategoryPath(tournament)} className="block">
+      <Link to={path} state={{ fromHistory: true }} className="block">
         <CardBody tournament={tournament} variant={variant} />
       </Link>
     )

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ButtonLoadingContent } from '@/components/ui/button-loading-content'
 import { PlayerPersonIcon } from '@/components/icons/PlayerPersonIcon'
 import { cn } from '@/lib/utils'
+import { fetchPlayerPage } from '@/features/app/players/use-player-search'
 import { eventsMockService } from '../api/events.mock'
 import { useEnrollmentModal } from '../context/EnrollmentModalContext'
 import { useEnrollmentForm } from '../hooks/use-enrollment-form'
@@ -77,6 +78,8 @@ function PlayerSearchSlot({
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<EnrollablePlayer[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [searchError, setSearchError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (player) {
@@ -85,18 +88,25 @@ function PlayerSearchSlot({
       setDropdownOpen(false)
       return
     }
-    if (!dropdownOpen) return
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      eventsMockService.searchEnrollmentPlayers(query, { excludeIds }).then((items) => {
-        if (!cancelled) setResults(items)
+    setSearchError(false)
+    setResults([])
+    if (!dropdownOpen || query.trim().length < 2) return
+    const controller = new AbortController()
+    const exclusions = excludeIds.filter(id => /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))
+    const timer = setTimeout(() => {
+      void fetchPlayerPage({ query }, 0, controller.signal, exclusions).then(page => {
+        if (controller.signal.aborted) return
+        setResults(page.items.map(item => ({
+          id: item.playerId,
+          name: [item.firstName, item.lastName].filter(Boolean).join(' '),
+          location: item.city ?? '',
+        })))
+      }).catch(() => {
+        if (!controller.signal.aborted) setSearchError(true)
       })
     }, 200)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [query, excludeIds, player, dropdownOpen])
+    return () => { clearTimeout(timer); controller.abort() }
+  }, [query, excludeIds, player, dropdownOpen, attempt])
 
   const showResults = dropdownOpen && !player && results.length > 0
 
@@ -123,6 +133,9 @@ function PlayerSearchSlot({
               className="min-w-0 flex-1 bg-transparent text-body-sm text-dark-900 outline-none placeholder:text-[#929195]"
             />
           </div>
+          {dropdownOpen && searchError && <button type="button" onClick={() => setAttempt(value => value + 1)} className="py-3 text-sm underline">
+            No pudimos buscar jugadores. Reintentar
+          </button>}
           {showResults && results.length > 0 ? (
             <ul className="absolute left-0 right-0 top-[calc(100%+4px)] z-10 max-h-48 overflow-y-auto rounded-lg border border-[#e7e7e8] bg-surface shadow-md">
               {results.map((item) => (

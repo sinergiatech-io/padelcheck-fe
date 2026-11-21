@@ -4,6 +4,8 @@ import playersIcon from '@/assets/category-policy/nav-players.svg'
 import clubIcon from '@/assets/category-policy/nav-club.svg'
 import dashboardActiveIcon from '@/assets/venues/nav-dashboard-active.svg'
 import clubInactiveIcon from '@/assets/venues/nav-club-inactive.svg'
+import playersActiveIcon from '@/assets/player-profile/nav-players-active.svg'
+import playersClubIcon from '@/assets/player-profile/nav-club-inactive.svg'
 
 interface ClubBottomNavProps {
   onDashboard: () => void
@@ -11,7 +13,7 @@ interface ClubBottomNavProps {
   onEvents?: () => void
   onPlayers?: () => void
   busy?: boolean
-  selectedLabel?: 'Dashboard' | 'Mi Club'
+  selectedLabel?: 'Dashboard' | 'Jugadores' | 'Mi Club'
 }
 
 /** KAN-105's club navigation; KAN-134 connects the remaining global destinations. */
@@ -19,8 +21,8 @@ export function ClubBottomNav({ onDashboard, onClub, onEvents, onPlayers, busy, 
   const items = [
     { label: 'Dashboard', icon: selectedLabel === 'Dashboard' ? dashboardActiveIcon : dashboardIcon, onPress: onDashboard },
     { label: 'Eventos', icon: eventsIcon, onPress: onEvents },
-    { label: 'Jugadores', icon: playersIcon, onPress: onPlayers },
-    { label: 'Mi Club', icon: selectedLabel === 'Mi Club' ? clubIcon : clubInactiveIcon, onPress: onClub },
+    { label: 'Jugadores', icon: selectedLabel === 'Jugadores' ? playersActiveIcon : playersIcon, onPress: onPlayers },
+    { label: 'Mi Club', icon: selectedLabel === 'Mi Club' ? clubIcon : selectedLabel === 'Jugadores' ? playersClubIcon : clubInactiveIcon, onPress: onClub },
   ]
   return (
     <nav aria-label="Navegación del club" className="h-16 shrink-0 bg-dark-900">

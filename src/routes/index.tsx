@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider, useSearchParams } from 'react-router-dom'
 import { CategoryPolicyPage } from '@/features/club/category-policy/CategoryPolicyPage'
+import { ClubPlayerProfilePage } from '@/features/club/player-profile/ClubPlayerProfilePage'
 import { ClubVenuesPage, MyClubPage } from '@/features/club/venues/ClubVenuesPage'
 import { ClubPlanPage } from '@/features/club/plan/ClubPlanPage'
 import { CheckoutReturnPage } from '@/features/club/plan/CheckoutReturnPage'
@@ -110,6 +111,7 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route path="/club/settings/tournaments" element={<ProtectedRoute><StartupReady><ClubSportSettingsPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/settings/venues/*" element={<ProtectedRoute><StartupReady><ClubVenuesPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/settings/categories" element={<ProtectedRoute><StartupReady><CategoryPolicyPage /></StartupReady></ProtectedRoute>} />
+        <Route path="/club/players/:playerId" element={<ProtectedRoute><StartupReady><ClubPlayerProfilePage /></StartupReady></ProtectedRoute>} />
         <Route path="/clubs/:clubId/public" element={<StartupReady><ClubPublicProfilePage /></StartupReady>} />
         <Route
           path={ROUTES.login}

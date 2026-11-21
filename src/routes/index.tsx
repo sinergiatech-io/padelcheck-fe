@@ -25,6 +25,9 @@ import { ClubRegisterPage } from '@/features/club-onboarding/ClubRegisterPage'
 import { PlayerRegisterPage } from '@/features/auth/pages/PlayerRegisterPage'
 import { SessionUnverifiedPage } from '@/features/auth/pages/SessionUnverifiedPage'
 import { MyTournamentsPage } from '@/features/app/my-tournaments/pages/MyTournamentsPage'
+import { PlayersPage } from '@/features/app/players/PlayersPage'
+import { PlayerHistoryPage, PlayerProfilePage, TournamentResultsPage } from '@/features/app/player-profile/ProfilePage'
+import { EditProfilePage, SecurityPage } from '@/features/app/player-profile/ProfileForms'
 import { DashboardPage } from '@/features/app/dashboard/pages/DashboardPage'
 import { DesignSystemPage } from '@/features/design-system/pages/DesignSystemPage'
 import { EventsListPage } from '@/features/app/events/pages/EventsListPage'
@@ -162,11 +165,17 @@ const router = createBrowserRouter(createRoutesFromElements(
           <Route path="events/:eventId/enroll" element={<LegacyEventEnrollRedirect />} />
           <Route path="tournaments" element={<StartupReady><DashboardPage /></StartupReady>} />
           <Route path="categories" element={<StartupReady><DashboardPage /></StartupReady>} />
-          <Route path="players" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="players" element={<StartupReady><PlayersPage /></StartupReady>} />
           <Route path="pairs" element={<StartupReady><DashboardPage /></StartupReady>} />
           <Route path="courts" element={<StartupReady><DashboardPage /></StartupReady>} />
           <Route path="matches" element={<StartupReady><DashboardPage /></StartupReady>} />
-          <Route path="settings" element={<StartupReady><DashboardPage /></StartupReady>} />
+          <Route path="settings" element={<StartupReady><PlayerProfilePage /></StartupReady>} />
+          <Route path="settings/edit" element={<StartupReady><EditProfilePage /></StartupReady>} />
+          <Route path="settings/security" element={<StartupReady><SecurityPage /></StartupReady>} />
+          <Route path="settings/security/password" element={<StartupReady><SecurityPage changing /></StartupReady>} />
+          <Route path="players/:playerId" element={<StartupReady><PlayerProfilePage /></StartupReady>} />
+          <Route path="players/:playerId/history" element={<StartupReady><PlayerHistoryPage /></StartupReady>} />
+          <Route path="players/:playerId/history/:eventId/:divisionId/results" element={<StartupReady><TournamentResultsPage /></StartupReady>} />
           <Route path="my-tournaments" element={<StartupReady><MyTournamentsPage /></StartupReady>} />
         </Route>
 

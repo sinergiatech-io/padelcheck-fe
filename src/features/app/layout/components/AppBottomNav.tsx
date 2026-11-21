@@ -28,7 +28,7 @@ export function AppBottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-40 bg-dark-900 md:hidden">
       <div className="mx-auto flex max-w-xl items-center">
         {navItems.map(({ to, label, Icon }) => (
-          <NavLink key={to} to={to} className={linkClass} end={to !== ROUTES.events}>
+          <NavLink key={to} to={to} className={linkClass} end={to !== ROUTES.events && to !== ROUTES.players}>
             {({ isActive }) => (
               <>
                 <Icon color={isActive ? '#C9CF38' : '#FAFAEB'} size={BOTTOM_NAV_ICON_SIZE} />

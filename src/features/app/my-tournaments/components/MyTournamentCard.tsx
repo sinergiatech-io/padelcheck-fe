@@ -3,6 +3,7 @@ import { ArrowForwardIcon, CalendarTodayIcon, LocationOnIcon } from '@/component
 import { EventStatusBadge } from '@/features/app/events/components/EventStatusBadge'
 import { myTournamentCategoryPath } from '../my-tournament-routes'
 import type { MyTournament } from '../types'
+import { tournamentResultsPath } from '@/features/app/player-profile/profile-api'
 import { TournamentResultChip } from './TournamentResultChip'
 
 type MyTournamentCardProps = {
@@ -55,12 +56,15 @@ function CardBody({ tournament, variant }: MyTournamentCardProps) {
       <div className="border-t border-[#b6b5b7] px-4 py-2">
         <DetailRow label="Categoría" value={tournament.categoryName} />
         <DetailRow label="Compañero" value={tournament.partnerName} />
+        {variant === 'active' && tournament.registrationStatus === 'WAITLIST' &&
+          <DetailRow label="Inscripción" value="En lista de espera" />}
         {variant === 'history' && tournament.result ? (
           <div className="flex items-center justify-between">
             <span className="text-body-sm font-medium leading-8 text-[#605e64]">Resultado</span>
             <TournamentResultChip result={tournament.result} />
           </div>
         ) : null}
+        {variant === 'history' && !tournament.result && <DetailRow label="Resultado" value="Resultado no disponible" />}
       </div>
 
       {variant === 'active' ? (
@@ -75,12 +79,18 @@ function CardBody({ tournament, variant }: MyTournamentCardProps) {
 
 export function MyTournamentCard({ tournament, variant }: MyTournamentCardProps) {
   if (variant === 'active') {
+    const path = tournament.playerId ? tournamentResultsPath(tournament.playerId, {
+      eventId: tournament.eventId, divisionId: tournament.categoryId,
+    }) + '?active=1' : myTournamentCategoryPath(tournament)
     return (
-      <Link to={myTournamentCategoryPath(tournament)} className="block">
+      <Link to={path} state={{ fromHistory: true }} className="block">
         <CardBody tournament={tournament} variant={variant} />
       </Link>
     )
   }
 
-  return <CardBody tournament={tournament} variant={variant} />
+  return tournament.playerId ? <Link to={tournamentResultsPath(tournament.playerId, {
+    eventId: tournament.eventId, divisionId: tournament.categoryId,
+  })} state={{ fromHistory: true }} className="block"><CardBody tournament={tournament} variant={variant} /></Link>
+    : <CardBody tournament={tournament} variant={variant} />
 }

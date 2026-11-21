@@ -122,7 +122,7 @@ function isPlayerArea(platform: AccessPlatform, pathname: string): boolean {
       pathname.startsWith('/app/my-tournaments/') ||
       pathname === '/app/players' ||
       pathname.startsWith('/app/players/') ||
-      pathname === '/app/settings'
+      /^\/app\/settings(?:\/(?:edit|security(?:\/password)?))?$/.test(pathname)
     )
   }
   return (
@@ -185,6 +185,7 @@ export function accessChoices(contexts: unknown): AccessChoice[] {
 
 function registeredPath(platform: AccessPlatform, candidate: string) {
   if (platform === 'web') {
+    if (/^\/app\/(?:players(?:\/[\w-]+(?:\/history(?:\/[\w-]+\/[\w-]+\/results)?)?)?|settings(?:\/(?:edit|security(?:\/password)?))?)$/.test(candidate)) return true
     if (/^\/app\/events\/[\w-]+(?:\/categories\/[\w-]+(?:\/(?:enroll|inscripciones|clasificatoria|cuadros|resultados))?)?$/.test(candidate)) return true
     return ['/app/events', '/app/events/location', '/app', '/app/my-tournaments', '/club/plan',
       '/club/settings', '/club/settings/info', '/club/settings/info/preview', '/club/settings/tournaments',

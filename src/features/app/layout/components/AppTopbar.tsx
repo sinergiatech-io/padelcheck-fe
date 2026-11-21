@@ -22,8 +22,9 @@ export function AppTopbar({ onOpenSidebar }: AppTopbarProps) {
   const location = useLocation()
   const isEventsRoute = location.pathname.startsWith('/app/events')
   const isMyTournamentsRoute = location.pathname.startsWith('/app/my-tournaments')
+  const isPlayersRoute = location.pathname === '/app/players'
   const isLocationPicker = location.pathname === '/app/events/location'
-  const isPlayerMobileHeader = isEventsRoute || isMyTournamentsRoute
+  const isPlayerMobileHeader = isEventsRoute || isMyTournamentsRoute || isPlayersRoute
   const eventId = getEventIdFromAppPath(location.pathname)
   const [eventTitle, setEventTitle] = useState<string | null>(null)
 
@@ -90,6 +91,8 @@ export function AppTopbar({ onOpenSidebar }: AppTopbarProps) {
           </>
         ) : isMyTournamentsRoute ? (
           <span className="text-h3 font-bold text-surface">Mis Torneos</span>
+        ) : isPlayersRoute ? (
+          <span className="text-h3 font-bold text-surface">Jugadores</span>
         ) : isEventsRoute ? (
           <span className="text-h3 font-semibold text-surface">Eventos</span>
         ) : (

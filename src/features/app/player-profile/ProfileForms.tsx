@@ -97,9 +97,13 @@ function Editor({ profile }: { profile: OwnProfile }) {
       cache.setQueryData(key, { ...updated, recentTournaments: profile.recentTournaments, stats: profile.stats })
       navigate('/app/settings', { replace: true, state: { saved: true } })
     } catch (error) {
-      setNotice(file && error instanceof ApiError && [400, 413].includes(error.status)
-        ? 'No pudimos guardar la foto. Elegí un archivo JPG o PNG de hasta 5 MB y reintentá.'
-        : 'No pudimos guardar los cambios. Reintentá.')
+      if (file && error instanceof ApiError && (error.code === 'PLAYER_AVATAR_INVALID' || error.status === 413)) {
+        setFile(undefined)
+        setPreview(undefined)
+        setNotice('No pudimos guardar la foto. Elegí un archivo JPG o PNG de hasta 5 MB y reintentá.')
+      } else {
+        setNotice('No pudimos guardar los cambios. Reintentá.')
+      }
     } finally {
       flight.current = false
       setSaving(false)

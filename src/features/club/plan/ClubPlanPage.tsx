@@ -10,6 +10,7 @@ import {
   businessDateLabel,
   chargeReading,
   includedFeatures,
+  invoiceNotice,
   limitsUseStoredPlan,
   moneyLabel,
   planActions,
@@ -112,6 +113,13 @@ export function ClubPlanPage() {
       <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-4">
         {!canView ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'loading' || plan.phase === 'idle' ? <LoadingState /> : plan.phase === 'forbidden' ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'error' || !plan.subscription || !plan.usage ? <p role="alert" className="rounded-lg border border-[#fac5c5] bg-[#fdecec] p-3 text-sm leading-5">No pudimos cargar el plan. Reintentá para consultar la suscripción y el uso. No mostramos esos datos como cero.</p> : <>
           <PlanIdentity subscription={plan.subscription} usage={plan.usage} />
+          {invoiceNotice(plan.subscription.commercialPeriod) && (() => {
+            const notice = invoiceNotice(plan.subscription.commercialPeriod)
+            return notice ? <div role="status" className="rounded-lg border border-[#c2d8fc] bg-[#ebf3fe] p-3">
+              <p className="text-sm font-semibold leading-5">{notice.title}</p>
+              <p className="mt-1 text-sm leading-5">{notice.body}</p>
+            </div> : null
+          })()}
           {plan.subscription.requestedPlan && <PendingRequest planCode={plan.subscription.requestedPlan.planCode} current={plan.subscription.planCode} />}
           {plan.charge && <ChargeNote status={chargeReading(plan.charge)} />}
           {plan.reference && <p className="text-xs leading-4 text-[#605e64]">Si volviste de Mercado Pago, comprobá el pago en esta pantalla. Cerrar la ventana no cancela el cobro.</p>}

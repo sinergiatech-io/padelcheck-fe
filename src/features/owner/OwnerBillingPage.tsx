@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ClubBilling,
   ClubSummary,
+  InvoiceStatus,
   MarkKind,
+  OwnerPayment,
   PaymentMedium,
   PlanCode,
   ownerApi,
@@ -36,11 +38,25 @@ const ACTIONS: Record<string, string> = {
   ANNUL_MARK: 'Marca anulada',
   APPLY_SCHEDULE: 'Cambio aplicado',
   UPDATE_CATALOG: 'Catálogo actualizado',
+  REGISTER_INVOICE: 'Factura registrada',
+  CORRECT_INVOICE: 'Factura corregida',
 }
 
 function blankToNull(value: string): string | null {
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
+}
+
+
+function invoiceablePayments(club: ClubBilling | null): OwnerPayment[] {
+  const rows = club?.payments ?? (club?.payment ? [club.payment] : [])
+  return rows.filter((item) => item.medium === 'TRANSFER' || item.medium === 'MERCADO_PAGO')
+}
+
+function invoiceLabel(status: InvoiceStatus | null | undefined): string {
+  if (status === 'PENDING') return 'pendiente'
+  if (status === 'ISSUED') return 'emitida'
+  return 'sin información'
 }
 
 export function OwnerBillingPage() {
@@ -70,6 +86,9 @@ export function OwnerBillingPage() {
   const [correctReason, setCorrectReason] = useState('')
   const [annulReason, setAnnulReason] = useState('')
   const [cancelReason, setCancelReason] = useState('')
+  const [invoicePaymentId, setInvoicePaymentId] = useState('')
+  const [invoiceStatus, setInvoiceStatus] = useState<InvoiceStatus>('ISSUED')
+  const [invoiceReason, setInvoiceReason] = useState('')
 
   async function loadClubs() {
     setLoadError(null)
@@ -86,13 +105,18 @@ export function OwnerBillingPage() {
   }, [])
 
   useEffect(() => {
+    const invoiceable = invoiceablePayments(club)
+    setInvoicePaymentId((current) => {
+      const selected = invoiceable.find((item) => item.id === current) ?? invoiceable[0]
+      return selected ? selected.id : ''
+    })
     if (!club?.payment) return
     setCorrectPlan(club.payment.planCode)
     setCorrectAmount(club.payment.amount ?? '')
     setCorrectCurrency(club.payment.currency ?? 'ARS')
     setCorrectStart(club.payment.periodStart)
     setCorrectEnd(club.payment.periodEnd ?? '')
-  }, [club?.payment])
+  }, [club])
 
   async function openClub(clubId: string) {
     setSelectedId(clubId)
@@ -150,6 +174,17 @@ export function OwnerBillingPage() {
     }), 'La marca quedó registrada.')
   }
 
+
+  function submitInvoice(event: FormEvent) {
+    event.preventDefault()
+    if (!selectedId || !invoicePaymentId) return
+    void run(
+      () => ownerApi.invoice(selectedId, invoicePaymentId, { status: invoiceStatus, reason: invoiceReason }),
+      invoiceStatus === 'ISSUED' ? 'La factura quedó emitida.' : 'La factura quedó pendiente.',
+    )
+    setInvoiceReason('')
+  }
+
   function submitCorrection(event: FormEvent) {
     event.preventDefault()
     if (!selectedId || !club?.payment) return
@@ -197,7 +232,7 @@ export function OwnerBillingPage() {
                   <p>Plan vigente: <strong>{club.planCode}</strong> · {club.status}</p>
                   <p>
                     {club.payment
-                      ? `${labelMedium(club.payment.medium)} ${club.payment.planCode}, ${club.payment.amount ?? '0'} ${club.payment.currency ?? ''} · ${club.payment.periodStart} a ${club.payment.periodEnd ?? 'sin fecha de fin'}`
+                      ? `${labelMedium(club.payment.medium)} ${club.payment.planCode}, ${club.payment.amount ?? '0'} ${club.payment.currency ?? ''} · ${club.payment.periodStart} a ${club.payment.periodEnd ?? 'sin fecha de fin'} · Factura ${invoiceLabel(club.payment.invoiceStatus)}`
                       : 'Sin pago vigente.'}
                   </p>
                   <p>{club.mark ? `Marca ${club.mark.kind} el ${club.mark.effectiveOn}${club.mark.proExitOn ? `, salida de PRO el ${club.mark.proExitOn}` : ''}.` : 'Sin marca pendiente.'}</p>
@@ -310,6 +345,41 @@ export function OwnerBillingPage() {
                         <Textarea value={annulReason} onChange={(event) => setAnnulReason(event.target.value)} required />
                       </label>
                       <Button type="submit" variant="destructive" loading={busy} loadingLabel="Guardando">Anular pago</Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+
+
+              {invoiceablePayments(club).length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle>Estado de factura</CardTitle></CardHeader>
+                  <CardContent>
+                    <p className="mb-3 text-sm text-dark-700">Registrá o corregí el estado del comprobante emitido fuera de PadelCheck. El motivo queda en el historial. Esto no cambia el plan ni el cobro.</p>
+                    <form className="grid gap-3" onSubmit={submitInvoice}>
+                      <label className="space-y-1 text-sm"><Label>Pago</Label>
+                        <select className={fieldClass} value={invoicePaymentId} onChange={(event) => {
+                          setInvoicePaymentId(event.target.value)
+                          const selected = invoiceablePayments(club).find((item) => item.id === event.target.value)
+                          setInvoiceStatus(selected?.invoiceStatus === 'ISSUED' ? 'PENDING' : 'ISSUED')
+                        }}>
+                          {invoiceablePayments(club).map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {labelMedium(item.medium)} {item.planCode} · {item.periodStart} a {item.periodEnd ?? 'sin fecha de fin'} · {item.status} · factura {invoiceLabel(item.invoiceStatus)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm"><Label>Estado</Label>
+                        <select className={fieldClass} value={invoiceStatus} onChange={(event) => setInvoiceStatus(event.target.value as InvoiceStatus)}>
+                          <option value="PENDING">Pendiente</option>
+                          <option value="ISSUED">Emitida</option>
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm"><Label>Motivo</Label>
+                        <Textarea value={invoiceReason} onChange={(event) => setInvoiceReason(event.target.value)} required />
+                      </label>
+                      <Button type="submit" loading={busy} loadingLabel="Guardando">Guardar estado</Button>
                     </form>
                   </CardContent>
                 </Card>

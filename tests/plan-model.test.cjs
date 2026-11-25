@@ -402,8 +402,8 @@ test('invoice notice appears only for a pending paid period', () => {
   }))
   assert.equal(pending.commercialPeriod.invoiceStatus, 'PENDING')
   assert.deepEqual(model.invoiceNotice(pending.commercialPeriod), {
-    title: 'Factura pendiente',
-    body: 'Tu plan ya está activo. La factura se emite después del cobro y no bloquea el uso del plan.',
+    title: 'Factura pendiente de emisión',
+    body: 'El pago está confirmado y tu plan ya está activo. La factura ARCA pendiente no limita el uso del plan.',
   })
 
   const issued = model.parseSubscription(subscription({

@@ -87,8 +87,10 @@ export function OwnerBillingPage() {
   const [annulReason, setAnnulReason] = useState('')
   const [cancelReason, setCancelReason] = useState('')
   const [invoicePaymentId, setInvoicePaymentId] = useState('')
-  const [invoiceStatus, setInvoiceStatus] = useState<InvoiceStatus>('ISSUED')
+  const [invoiceStatus, setInvoiceStatus] = useState<InvoiceStatus | ''>('')
   const [invoiceReason, setInvoiceReason] = useState('')
+  const invoicePayments = invoiceablePayments(club)
+  const invoicePayment = invoicePayments.find((item) => item.id === invoicePaymentId) ?? invoicePayments[0]
 
   async function loadClubs() {
     setLoadError(null)
@@ -105,21 +107,20 @@ export function OwnerBillingPage() {
   }, [])
 
   useEffect(() => {
-    const invoiceable = invoiceablePayments(club)
-    setInvoicePaymentId((current) => {
-      const selected = invoiceable.find((item) => item.id === current) ?? invoiceable[0]
-      return selected ? selected.id : ''
-    })
     if (!club?.payment) return
     setCorrectPlan(club.payment.planCode)
     setCorrectAmount(club.payment.amount ?? '')
     setCorrectCurrency(club.payment.currency ?? 'ARS')
     setCorrectStart(club.payment.periodStart)
     setCorrectEnd(club.payment.periodEnd ?? '')
-  }, [club])
+  }, [club?.payment])
 
   async function openClub(clubId: string) {
     setSelectedId(clubId)
+    setClub(null)
+    setInvoicePaymentId('')
+    setInvoiceStatus('')
+    setInvoiceReason('')
     setNotice(null)
     setError(null)
     setBusy(true)
@@ -133,14 +134,20 @@ export function OwnerBillingPage() {
     }
   }
 
-  async function run(action: () => Promise<ClubBilling>, done: string) {
+  async function run(action: () => Promise<ClubBilling>, done: string, onSuccess?: () => void) {
     setBusy(true)
     setError(null)
     setNotice(null)
     try {
       const next = await action()
       setClub(next)
+      if (invoicePayment && !invoiceablePayments(next).some((item) => item.id === invoicePayment.id)) {
+        setInvoicePaymentId('')
+        setInvoiceStatus('')
+        setInvoiceReason('')
+      }
       setNotice(done)
+      onSuccess?.()
       await loadClubs()
     } catch (caught) {
       setError(ownerError(caught))
@@ -177,12 +184,15 @@ export function OwnerBillingPage() {
 
   function submitInvoice(event: FormEvent) {
     event.preventDefault()
-    if (!selectedId || !invoicePaymentId) return
+    if (busy || !club || !invoicePayment || !invoiceStatus || !invoiceReason.trim()) return
     void run(
-      () => ownerApi.invoice(selectedId, invoicePaymentId, { status: invoiceStatus, reason: invoiceReason }),
+      () => ownerApi.invoice(club.clubId, invoicePayment.id, { status: invoiceStatus, reason: invoiceReason }),
       invoiceStatus === 'ISSUED' ? 'La factura quedó emitida.' : 'La factura quedó pendiente.',
+      () => {
+        setInvoiceStatus('')
+        setInvoiceReason('')
+      },
     )
-    setInvoiceReason('')
   }
 
   function submitCorrection(event: FormEvent) {
@@ -209,6 +219,7 @@ export function OwnerBillingPage() {
             <li key={item.clubId}>
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => void openClub(item.clubId)}
                 className={`w-full rounded-md border px-3 py-2 text-left text-sm ${selectedId === item.clubId ? 'border-primary-500 bg-surface' : 'border-divider bg-surface'}`}
               >
@@ -232,7 +243,7 @@ export function OwnerBillingPage() {
                   <p>Plan vigente: <strong>{club.planCode}</strong> · {club.status}</p>
                   <p>
                     {club.payment
-                      ? `${labelMedium(club.payment.medium)} ${club.payment.planCode}, ${club.payment.amount ?? '0'} ${club.payment.currency ?? ''} · ${club.payment.periodStart} a ${club.payment.periodEnd ?? 'sin fecha de fin'} · Factura ${invoiceLabel(club.payment.invoiceStatus)}`
+                      ? `${labelMedium(club.payment.medium)} ${club.payment.planCode}, ${club.payment.amount ?? '0'} ${club.payment.currency ?? ''} · ${club.payment.periodStart} a ${club.payment.periodEnd ?? 'sin fecha de fin'}`
                       : 'Sin pago vigente.'}
                   </p>
                   <p>{club.mark ? `Marca ${club.mark.kind} el ${club.mark.effectiveOn}${club.mark.proExitOn ? `, salida de PRO el ${club.mark.proExitOn}` : ''}.` : 'Sin marca pendiente.'}</p>
@@ -351,19 +362,19 @@ export function OwnerBillingPage() {
               )}
 
 
-              {invoiceablePayments(club).length > 0 && (
+              {invoicePayment && (
                 <Card>
                   <CardHeader><CardTitle>Estado de factura</CardTitle></CardHeader>
                   <CardContent>
                     <p className="mb-3 text-sm text-dark-700">Registrá o corregí el estado del comprobante emitido fuera de PadelCheck. El motivo queda en el historial. Esto no cambia el plan ni el cobro.</p>
                     <form className="grid gap-3" onSubmit={submitInvoice}>
                       <label className="space-y-1 text-sm"><Label>Pago</Label>
-                        <select className={fieldClass} value={invoicePaymentId} onChange={(event) => {
+                        <select className={fieldClass} value={invoicePayment.id} disabled={busy} onChange={(event) => {
                           setInvoicePaymentId(event.target.value)
-                          const selected = invoiceablePayments(club).find((item) => item.id === event.target.value)
-                          setInvoiceStatus(selected?.invoiceStatus === 'ISSUED' ? 'PENDING' : 'ISSUED')
+                          setInvoiceStatus('')
+                          setInvoiceReason('')
                         }}>
-                          {invoiceablePayments(club).map((item) => (
+                          {invoicePayments.map((item) => (
                             <option key={item.id} value={item.id}>
                               {labelMedium(item.medium)} {item.planCode} · {item.periodStart} a {item.periodEnd ?? 'sin fecha de fin'} · {item.status} · factura {invoiceLabel(item.invoiceStatus)}
                             </option>
@@ -371,15 +382,16 @@ export function OwnerBillingPage() {
                         </select>
                       </label>
                       <label className="space-y-1 text-sm"><Label>Estado</Label>
-                        <select className={fieldClass} value={invoiceStatus} onChange={(event) => setInvoiceStatus(event.target.value as InvoiceStatus)}>
-                          <option value="PENDING">Pendiente</option>
-                          <option value="ISSUED">Emitida</option>
+                        <select className={fieldClass} required disabled={busy} value={invoiceStatus} onChange={(event) => setInvoiceStatus(event.target.value as InvoiceStatus | '')}>
+                          <option value="">Elegí un estado</option>
+                          <option value="PENDING" disabled={invoicePayment.invoiceStatus === 'PENDING'}>Pendiente</option>
+                          <option value="ISSUED" disabled={invoicePayment.invoiceStatus === 'ISSUED'}>Emitida</option>
                         </select>
                       </label>
                       <label className="space-y-1 text-sm"><Label>Motivo</Label>
-                        <Textarea value={invoiceReason} onChange={(event) => setInvoiceReason(event.target.value)} required />
+                        <Textarea value={invoiceReason} onChange={(event) => setInvoiceReason(event.target.value)} required disabled={busy} />
                       </label>
-                      <Button type="submit" loading={busy} loadingLabel="Guardando">Guardar estado</Button>
+                      <Button type="submit" disabled={!invoiceStatus || !invoiceReason.trim()} loading={busy} loadingLabel="Guardando">Guardar estado</Button>
                     </form>
                   </CardContent>
                 </Card>

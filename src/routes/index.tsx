@@ -133,10 +133,10 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route path={ROUTES.registerClub} element={<ClubRegisterGate />} />
         <Route path={`${ROUTES.registerClub}/verify`} element={<StartupReady><ClubRegisterPage /></StartupReady>} />
         <Route path={`/verify`} element={<StartupReady><ClubRegisterPage /></StartupReady>} />
+        <Route path={ROUTES.pricing} element={<StartupReady><PricingPage /></StartupReady>} />
         <Route element={<PublicLayout />}>
           <Route path={ROUTES.home} element={<StartupReady><LandingPage /></StartupReady>} />
           <Route path={ROUTES.designSystem} element={<StartupReady><DesignSystemPage /></StartupReady>} />
-          <Route path={ROUTES.pricing} element={<StartupReady><PricingPage /></StartupReady>} />
           <Route path={ROUTES.faq} element={<StartupReady><FaqPage /></StartupReady>} />
           <Route path={ROUTES.register} element={<Navigate to={ROUTES.registerClub} replace />} />
 

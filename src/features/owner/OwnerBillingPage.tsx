@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ClubBilling,
   ClubSummary,
+  InvoiceStatus,
   MarkKind,
+  OwnerPayment,
   PaymentMedium,
   PlanCode,
   ownerApi,
@@ -36,11 +38,25 @@ const ACTIONS: Record<string, string> = {
   ANNUL_MARK: 'Marca anulada',
   APPLY_SCHEDULE: 'Cambio aplicado',
   UPDATE_CATALOG: 'Catálogo actualizado',
+  REGISTER_INVOICE: 'Factura registrada',
+  CORRECT_INVOICE: 'Factura corregida',
 }
 
 function blankToNull(value: string): string | null {
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
+}
+
+
+function invoiceablePayments(club: ClubBilling | null): OwnerPayment[] {
+  const rows = club?.payments ?? (club?.payment ? [club.payment] : [])
+  return rows.filter((item) => item.medium === 'TRANSFER' || item.medium === 'MERCADO_PAGO')
+}
+
+function invoiceLabel(status: InvoiceStatus | null | undefined): string {
+  if (status === 'PENDING') return 'pendiente'
+  if (status === 'ISSUED') return 'emitida'
+  return 'sin información'
 }
 
 export function OwnerBillingPage() {
@@ -70,6 +86,11 @@ export function OwnerBillingPage() {
   const [correctReason, setCorrectReason] = useState('')
   const [annulReason, setAnnulReason] = useState('')
   const [cancelReason, setCancelReason] = useState('')
+  const [invoicePaymentId, setInvoicePaymentId] = useState('')
+  const [invoiceStatus, setInvoiceStatus] = useState<InvoiceStatus | ''>('')
+  const [invoiceReason, setInvoiceReason] = useState('')
+  const invoicePayments = invoiceablePayments(club)
+  const invoicePayment = invoicePayments.find((item) => item.id === invoicePaymentId) ?? invoicePayments[0]
 
   async function loadClubs() {
     setLoadError(null)
@@ -96,6 +117,10 @@ export function OwnerBillingPage() {
 
   async function openClub(clubId: string) {
     setSelectedId(clubId)
+    setClub(null)
+    setInvoicePaymentId('')
+    setInvoiceStatus('')
+    setInvoiceReason('')
     setNotice(null)
     setError(null)
     setBusy(true)
@@ -109,14 +134,20 @@ export function OwnerBillingPage() {
     }
   }
 
-  async function run(action: () => Promise<ClubBilling>, done: string) {
+  async function run(action: () => Promise<ClubBilling>, done: string, onSuccess?: () => void) {
     setBusy(true)
     setError(null)
     setNotice(null)
     try {
       const next = await action()
       setClub(next)
+      if (invoicePayment && !invoiceablePayments(next).some((item) => item.id === invoicePayment.id)) {
+        setInvoicePaymentId('')
+        setInvoiceStatus('')
+        setInvoiceReason('')
+      }
       setNotice(done)
+      onSuccess?.()
       await loadClubs()
     } catch (caught) {
       setError(ownerError(caught))
@@ -150,6 +181,20 @@ export function OwnerBillingPage() {
     }), 'La marca quedó registrada.')
   }
 
+
+  function submitInvoice(event: FormEvent) {
+    event.preventDefault()
+    if (busy || !club || !invoicePayment || !invoiceStatus || !invoiceReason.trim()) return
+    void run(
+      () => ownerApi.invoice(club.clubId, invoicePayment.id, { status: invoiceStatus, reason: invoiceReason }),
+      invoiceStatus === 'ISSUED' ? 'La factura quedó emitida.' : 'La factura quedó pendiente.',
+      () => {
+        setInvoiceStatus('')
+        setInvoiceReason('')
+      },
+    )
+  }
+
   function submitCorrection(event: FormEvent) {
     event.preventDefault()
     if (!selectedId || !club?.payment) return
@@ -174,6 +219,7 @@ export function OwnerBillingPage() {
             <li key={item.clubId}>
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => void openClub(item.clubId)}
                 className={`w-full rounded-md border px-3 py-2 text-left text-sm ${selectedId === item.clubId ? 'border-primary-500 bg-surface' : 'border-divider bg-surface'}`}
               >
@@ -310,6 +356,42 @@ export function OwnerBillingPage() {
                         <Textarea value={annulReason} onChange={(event) => setAnnulReason(event.target.value)} required />
                       </label>
                       <Button type="submit" variant="destructive" loading={busy} loadingLabel="Guardando">Anular pago</Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+
+
+              {invoicePayment && (
+                <Card>
+                  <CardHeader><CardTitle>Estado de factura</CardTitle></CardHeader>
+                  <CardContent>
+                    <p className="mb-3 text-sm text-dark-700">Registrá o corregí el estado del comprobante emitido fuera de PadelCheck. El motivo queda en el historial. Esto no cambia el plan ni el cobro.</p>
+                    <form className="grid gap-3" onSubmit={submitInvoice}>
+                      <label className="space-y-1 text-sm"><Label>Pago</Label>
+                        <select className={fieldClass} value={invoicePayment.id} disabled={busy} onChange={(event) => {
+                          setInvoicePaymentId(event.target.value)
+                          setInvoiceStatus('')
+                          setInvoiceReason('')
+                        }}>
+                          {invoicePayments.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {labelMedium(item.medium)} {item.planCode} · {item.periodStart} a {item.periodEnd ?? 'sin fecha de fin'} · {item.status} · factura {invoiceLabel(item.invoiceStatus)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm"><Label>Estado</Label>
+                        <select className={fieldClass} required disabled={busy} value={invoiceStatus} onChange={(event) => setInvoiceStatus(event.target.value as InvoiceStatus | '')}>
+                          <option value="">Elegí un estado</option>
+                          <option value="PENDING" disabled={invoicePayment.invoiceStatus === 'PENDING'}>Pendiente</option>
+                          <option value="ISSUED" disabled={invoicePayment.invoiceStatus === 'ISSUED'}>Emitida</option>
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm"><Label>Motivo</Label>
+                        <Textarea value={invoiceReason} onChange={(event) => setInvoiceReason(event.target.value)} required disabled={busy} />
+                      </label>
+                      <Button type="submit" disabled={!invoiceStatus || !invoiceReason.trim()} loading={busy} loadingLabel="Guardando">Guardar estado</Button>
                     </form>
                   </CardContent>
                 </Card>

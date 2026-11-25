@@ -38,6 +38,7 @@ export function storedCharge(scope: BillingScope): string | null {
 
 export function useClubPlan(clubId: string | null, userId: string | null, session: string | null) {
   const sessionKey = `${userId ?? ''}:${session}`
+  const scopeKey = `${clubId ?? ''}:${sessionKey}`
   const generation = useRef(0)
   const usageTicket = useRef(0)
   const eventIdRef = useRef<string | null>(null)
@@ -47,6 +48,7 @@ export function useClubPlan(clubId: string | null, userId: string | null, sessio
   const scopeRef = useRef<BillingScope | null>(null)
   scopeRef.current = clubId && userId && session ? { userId, session, clubId } : null
   const [phase, setPhase] = useState<PlanPhase>('idle')
+  const [loadedScope, setLoadedScope] = useState(scopeKey)
   const [subscription, setSubscription] = useState<ClubSubscription | null>(null)
   const [usage, setUsage] = useState<ClubUsage | null>(null)
   const [events, setEvents] = useState<ClubEventOption[] | null>(null)
@@ -209,6 +211,7 @@ export function useClubPlan(clubId: string | null, userId: string | null, sessio
   useEffect(() => {
     generation.current += 1
     usageTicket.current += 1
+    setLoadedScope(scopeKey)
     replaceEvent(null)
     setSubscription(null)
     setUsage(null)
@@ -268,7 +271,7 @@ export function useClubPlan(clubId: string | null, userId: string | null, sessio
       }
     })()
     return () => controller.abort()
-  }, [clubId, currentScope, loadCharge, replaceEvent, sessionKey, userId])
+  }, [clubId, currentScope, loadCharge, replaceEvent, scopeKey, session, sessionKey, userId])
 
   const selectEvent = useCallback(async (next: string | null) => {
     if (!clubId || phase !== 'ready') return
@@ -328,7 +331,7 @@ export function useClubPlan(clubId: string | null, userId: string | null, sessio
   }, [currentScope])
 
   return {
-    phase,
+    phase: loadedScope === scopeKey ? phase : 'loading' as const,
     subscription,
     usage,
     events,

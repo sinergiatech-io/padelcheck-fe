@@ -70,6 +70,7 @@ export interface CommercialPeriod {
   periodStart: string | null
   periodEnd: string | null
   open: boolean
+  invoiceStatus: 'PENDING' | 'ISSUED' | 'ABSENT'
 }
 
 export interface BillingActions {
@@ -722,12 +723,23 @@ export function parseSubscription(value: unknown): ClubSubscription | null {
           periodStart: text(period.periodStart),
           periodEnd: text(period.periodEnd),
           open: period.open === true,
+          invoiceStatus: period.invoiceStatus === 'PENDING' || period.invoiceStatus === 'ISSUED' ? period.invoiceStatus : 'ABSENT',
         }
-      : { kind: 'ABSENT', medium: null, planCode: null, periodStart: null, periodEnd: null, open: false },
+      : { kind: 'ABSENT', medium: null, planCode: null, periodStart: null, periodEnd: null, open: false, invoiceStatus: 'ABSENT' },
     actions: {
       fullCheckout: actions?.fullCheckout === true,
       requestAdjustmentQuote: actions?.requestAdjustmentQuote === true,
     },
+  }
+}
+
+
+export function invoiceNotice(period: CommercialPeriod | null | undefined, planCode?: ClubSubscription['planCode']): { title: string; body: string } | null {
+  if (!period || period.kind !== 'PAID' || period.invoiceStatus !== 'PENDING') return null
+  const plan = planCode === 'PRO' || planCode === 'ELITE' ? planCode : 'tu plan'
+  return {
+    title: 'Factura pendiente de emisión',
+    body: `El pago está confirmado y ${plan} ya está activo. La factura ARCA pendiente no limita el uso del plan.`,
   }
 }
 

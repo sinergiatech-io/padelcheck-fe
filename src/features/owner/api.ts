@@ -2,6 +2,7 @@ import { apiClient, ApiError } from '@/lib/api-client'
 
 export type PlanCode = 'FREE' | 'PRO' | 'ELITE'
 export type PaymentMedium = 'TRANSFER' | 'MERCADO_PAGO' | 'COURTESY'
+export type InvoiceStatus = 'PENDING' | 'ISSUED'
 export type MarkKind = 'TO_FREE' | 'TO_PRO'
 
 export interface ClubSummary {
@@ -23,6 +24,7 @@ export interface OwnerPayment {
   periodEnd: string | null
   status: string
   reason: string
+  invoiceStatus: InvoiceStatus | null
 }
 
 export interface OwnerMark {
@@ -48,6 +50,7 @@ export interface ClubBilling {
   periodStart: string | null
   periodEnd: string | null
   payment: OwnerPayment | null
+  payments: OwnerPayment[]
   mark: OwnerMark | null
   history: OwnerAudit[]
 }
@@ -95,6 +98,11 @@ const OWNER_ERRORS: Record<string, string> = {
   'The courtesy already ends on its end date': 'La cortesía ya vuelve a FREE en su fecha de fin.',
   'Only ELITE can move to PRO': 'Solo un ELITE puede pasar a PRO.',
   'There is no scheduled change to cancel': 'No hay una marca para anular.',
+  'Invoice status is required': 'El estado de la factura es obligatorio.',
+  'Courtesy payments do not have an invoice': 'Las cortesías no tienen factura.',
+  'The invoice cannot be updated on an annulled payment': 'No se puede actualizar la factura de un pago anulado.',
+  'The invoice is already in that status': 'La factura ya está en ese estado.',
+  'Payment not found': 'No encontramos ese pago.',
   'A paid period is required before scheduling a change': 'Primero tiene que haber un pago vigente.',
   'Transfer and Mercado Pago payments need an end date': 'La transferencia y Mercado Pago necesitan fecha de fin.',
   'Paid plan must be PRO or ELITE': 'El plan pago tiene que ser PRO o ELITE.',
@@ -114,6 +122,8 @@ export const ownerApi = {
     apiClient.post<ClubBilling>(`/platform/billing/clubs/${clubId}/payments/${paymentId}/corrections`, body, { timeoutMs: 20000 }),
   annul: (clubId: string, paymentId: string, reason: string) =>
     apiClient.post<ClubBilling>(`/platform/billing/clubs/${clubId}/payments/${paymentId}/annulments`, { reason }, { timeoutMs: 20000 }),
+  invoice: (clubId: string, paymentId: string, body: { status: InvoiceStatus; reason: string }) =>
+    apiClient.post<ClubBilling>(`/platform/billing/clubs/${clubId}/payments/${paymentId}/invoice`, body, { timeoutMs: 20000 }),
   mark: (clubId: string, body: unknown) =>
     apiClient.post<ClubBilling>(`/platform/billing/clubs/${clubId}/marks`, body, { timeoutMs: 20000 }),
   annulMark: (clubId: string, reason: string) =>

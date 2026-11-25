@@ -6,10 +6,12 @@ import { SearchFieldIcon } from '@/components/icons/SearchFieldIcon'
 import { useAuth } from '@/context/AuthContext'
 import { ClubBottomNav } from '../category-policy/ClubBottomNav'
 import { JourneyDialog, usePlanJourney } from './plan-journey'
+import invoiceClock from './invoice-clock.svg'
 import {
   businessDateLabel,
   chargeReading,
   includedFeatures,
+  invoiceNotice,
   limitsUseStoredPlan,
   moneyLabel,
   planActions,
@@ -100,6 +102,7 @@ export function ClubPlanPage() {
   }
 
   const showFooter = canView && (plan.phase === 'loading' || plan.phase === 'error' || Boolean(actions.primary))
+  const invoice = invoiceNotice(plan.subscription?.commercialPeriod, plan.subscription?.planCode)
 
   return <div className="flex h-dvh flex-col bg-[#f8f8f8] text-[#120f18]">
     <header className="flex h-14 shrink-0 items-center bg-[#100e16] px-4 text-white">
@@ -112,6 +115,13 @@ export function ClubPlanPage() {
       <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-4">
         {!canView ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'loading' || plan.phase === 'idle' ? <LoadingState /> : plan.phase === 'forbidden' ? <p role="alert" className="text-sm leading-5">No tenés permiso para ver el plan de este club.</p> : plan.phase === 'error' || !plan.subscription || !plan.usage ? <p role="alert" className="rounded-lg border border-[#fac5c5] bg-[#fdecec] p-3 text-sm leading-5">No pudimos cargar el plan. Reintentá para consultar la suscripción y el uso. No mostramos esos datos como cero.</p> : <>
           <PlanIdentity subscription={plan.subscription} usage={plan.usage} />
+          {invoice && <div role="status" className="flex items-center gap-3 rounded-[8px] border border-[#c2d8fc] bg-[#ebf3fe] p-3">
+            <span className="flex size-6 shrink-0 items-center justify-center"><img src={invoiceClock} alt="" width={20} height={20} /></span>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <p className="text-sm font-semibold leading-5">{invoice.title}</p>
+              <p className="text-xs leading-4 text-[#605e64]">{invoice.body}</p>
+            </div>
+          </div>}
           {plan.subscription.requestedPlan && <PendingRequest planCode={plan.subscription.requestedPlan.planCode} current={plan.subscription.planCode} />}
           {plan.charge && <ChargeNote status={chargeReading(plan.charge)} />}
           {plan.reference && <p className="text-xs leading-4 text-[#605e64]">Si volviste de Mercado Pago, comprobá el pago en esta pantalla. Cerrar la ventana no cancela el cobro.</p>}

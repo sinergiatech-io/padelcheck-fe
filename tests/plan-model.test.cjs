@@ -265,7 +265,7 @@ function subscription(extra) {
   return {
     clubId: 'c', planCode: 'FREE', status: 'ACTIVE', agreedRenewalAmount: null, agreedRenewalCurrency: null, periodEnd: null,
     recurrencePaused: null, recurrenceResumeAction: null, recurrenceAuthorizationUrl: null,
-    commercialPeriod: { kind: 'ABSENT', medium: null, planCode: null, periodStart: null, periodEnd: null, open: false },
+    commercialPeriod: { kind: 'ABSENT', medium: null, planCode: null, periodStart: null, periodEnd: null, open: false, invoiceStatus: 'ABSENT' },
     actions: { fullCheckout: true, requestAdjustmentQuote: false },
     ...extra,
   }
@@ -389,4 +389,38 @@ test('a late checkout url and a late event list do not land on the next club', a
   generation = 2
   release([{ id: 'from-previous-club' }])
   assert.equal(await events, 'stale')
+})
+
+test('invoice notice appears only for a pending paid period', () => {
+  const absent = model.parseSubscription(subscription({}))
+  assert.equal(absent.commercialPeriod.invoiceStatus, 'ABSENT')
+  assert.equal(model.invoiceNotice(absent.commercialPeriod), null)
+
+  const pending = model.parseSubscription(subscription({
+    planCode: 'PRO',
+    commercialPeriod: { kind: 'PAID', medium: 'TRANSFER', planCode: 'PRO', periodStart: '2026-11-01', periodEnd: '2026-12-01', open: true, invoiceStatus: 'PENDING' },
+  }))
+  assert.equal(pending.commercialPeriod.invoiceStatus, 'PENDING')
+  assert.deepEqual(model.invoiceNotice(pending.commercialPeriod), {
+    title: 'Factura pendiente de emisión',
+    body: 'El pago está confirmado y tu plan ya está activo. La factura ARCA pendiente no limita el uso del plan.',
+  })
+
+  const issued = model.parseSubscription(subscription({
+    planCode: 'PRO',
+    commercialPeriod: { kind: 'PAID', medium: 'TRANSFER', planCode: 'PRO', periodStart: '2026-11-01', periodEnd: '2026-12-01', open: true, invoiceStatus: 'ISSUED' },
+  }))
+  assert.equal(issued.commercialPeriod.invoiceStatus, 'ISSUED')
+  assert.equal(model.invoiceNotice(issued.commercialPeriod), null)
+
+  const courtesy = model.parseSubscription(subscription({
+    planCode: 'PRO',
+    commercialPeriod: { kind: 'COURTESY', medium: 'COURTESY', planCode: 'PRO', periodStart: '2026-11-01', periodEnd: null, open: true, invoiceStatus: 'PENDING' },
+  }))
+  assert.equal(model.invoiceNotice(courtesy.commercialPeriod), null)
+
+  const missing = model.parseSubscription(subscription({
+    commercialPeriod: { kind: 'PAID', medium: 'TRANSFER', planCode: 'PRO', periodStart: '2026-11-01', periodEnd: '2026-12-01', open: true },
+  }))
+  assert.equal(missing.commercialPeriod.invoiceStatus, 'ABSENT')
 })

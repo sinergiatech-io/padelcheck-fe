@@ -42,6 +42,7 @@ export function PricingPage() {
     [catalog.phase, catalog.catalog],
   )
   const segmentsEnabled = showOffers
+  const incomplete = catalog.phase === 'ready' && catalog.catalog?.status === 'incomplete'
 
   const geometry = useCallback(() => {
     const element = strip.current
@@ -120,13 +121,18 @@ export function PricingPage() {
             {catalog.phase === 'loading' && <RegistrationBanner tone="info" title="Cargando planes" detail="Estamos consultando los planes disponibles." />}
             {catalog.phase === 'error' && <RegistrationBanner tone="error" role="alert" title="No pudimos cargar los planes" detail="Revisá tu conexión e intentá nuevamente." />}
             {catalog.phase === 'ready' && catalog.catalog?.status === 'empty' && <RegistrationBanner tone="warning" title="No hay planes disponibles" detail="Por el momento no hay planes para mostrar. Intentá nuevamente más tarde." />}
-            {catalog.phase === 'ready' && catalog.catalog?.status === 'incomplete' && <RegistrationBanner tone="warning" title="Información incompleta" detail="Algunos datos no están disponibles. Las ofertas sin datos no se pueden elegir por ahora." />}
+            {incomplete && <RegistrationBanner tone="warning" title="Información incompleta" detail="Algunos datos no están disponibles. Las ofertas sin datos no se pueden elegir por ahora." />}
             {(catalog.phase === 'error' || (catalog.phase === 'ready' && catalog.catalog?.status === 'empty')) && (
               <button type="button" onClick={catalog.retry} className={`mt-3 flex h-12 w-full items-center justify-center rounded-lg bg-[#C9CF38] px-6 text-sm font-medium leading-[21px] text-[#120F18] ${focusRing}`}>
                 Reintentar
               </button>
             )}
           </div>
+          {incomplete && (
+            <button type="button" onClick={catalog.retry} className={`min-h-11 rounded-md text-sm font-medium text-[#FAFAEB] underline underline-offset-2 ${focusRing}`}>
+              Reintentar
+            </button>
+          )}
 
           {(catalog.phase === 'loading' || showOffers) && (
             <div role="group" aria-label="Ofertas de planes" className="mt-5 flex rounded-lg border border-[#3A3740] p-0.5">

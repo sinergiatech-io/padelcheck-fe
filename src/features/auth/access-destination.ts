@@ -152,7 +152,7 @@ export function guardRedirect(
     || path === '/club/settings/info' || path === '/club/settings/info/preview'
     || path === '/club/settings/tournaments'
     || path === '/club/settings/venues' || path.startsWith('/club/settings/venues/')
-    || path === '/club/plan'
+    || path === '/club/plan' || isClubEventsPath(path)
   const clubPlayer = /^\/club\/players\/[\w-]+$/.test(path)
   return path === clubRoot || clubSettings || clubPlayer || platform === 'native' && path === '/club' ? null : clubRoot
 }
@@ -183,7 +183,12 @@ export function accessChoices(contexts: unknown): AccessChoice[] {
   })
 }
 
+function isClubEventsPath(path: string) {
+  return /^\/club\/events(?:\/new|\/[\w-]+(?:\/edit)?)?$/.test(path)
+}
+
 function registeredPath(platform: AccessPlatform, candidate: string) {
+  if (isClubEventsPath(candidate)) return true
   if (platform === 'web') {
     if (/^\/app\/(?:players(?:\/[\w-]+(?:\/history(?:\/[\w-]+\/[\w-]+\/results)?)?)?|settings(?:\/(?:edit|security(?:\/password)?))?)$/.test(candidate)) return true
     if (/^\/app\/events\/[\w-]+(?:\/categories\/[\w-]+(?:\/(?:enroll|inscripciones|clasificatoria|cuadros|resultados))?)?$/.test(candidate)) return true

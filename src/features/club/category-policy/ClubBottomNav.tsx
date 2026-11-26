@@ -1,5 +1,8 @@
+import { useNavigate } from 'react-router-dom'
 import dashboardIcon from '@/assets/category-policy/nav-dashboard.svg'
 import eventsIcon from '@/assets/category-policy/nav-events.svg'
+import eventsActive from '@/assets/club-events/nav-events-active.svg'
+import clubInactiveForEvents from '@/assets/club-events/nav-club.svg'
 import playersIcon from '@/assets/category-policy/nav-players.svg'
 import clubIcon from '@/assets/category-policy/nav-club.svg'
 import dashboardActiveIcon from '@/assets/venues/nav-dashboard-active.svg'
@@ -13,16 +16,17 @@ interface ClubBottomNavProps {
   onEvents?: () => void
   onPlayers?: () => void
   busy?: boolean
-  selectedLabel?: 'Dashboard' | 'Jugadores' | 'Mi Club'
+  selectedLabel?: 'Dashboard' | 'Eventos' | 'Jugadores' | 'Mi Club'
 }
 
 /** KAN-105's club navigation; KAN-134 connects the remaining global destinations. */
 export function ClubBottomNav({ onDashboard, onClub, onEvents, onPlayers, busy, selectedLabel = 'Mi Club' }: ClubBottomNavProps) {
+  const navigate = useNavigate()
   const items = [
     { label: 'Dashboard', icon: selectedLabel === 'Dashboard' ? dashboardActiveIcon : dashboardIcon, onPress: onDashboard },
-    { label: 'Eventos', icon: eventsIcon, onPress: onEvents },
+    { label: 'Eventos', icon: selectedLabel === 'Eventos' ? eventsActive : eventsIcon, onPress: onEvents ?? (() => navigate('/club/events')) },
     { label: 'Jugadores', icon: selectedLabel === 'Jugadores' ? playersActiveIcon : playersIcon, onPress: onPlayers },
-    { label: 'Mi Club', icon: selectedLabel === 'Mi Club' ? clubIcon : selectedLabel === 'Jugadores' ? playersClubIcon : clubInactiveIcon, onPress: onClub },
+    { label: 'Mi Club', icon: selectedLabel === 'Mi Club' ? clubIcon : selectedLabel === 'Jugadores' ? playersClubIcon : selectedLabel === 'Eventos' ? clubInactiveForEvents : clubInactiveIcon, onPress: onClub },
   ]
   return (
     <nav aria-label="Navegación del club" className="h-16 shrink-0 bg-dark-900">

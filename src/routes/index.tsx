@@ -30,6 +30,7 @@ import { PlayerHistoryPage, PlayerProfilePage, TournamentResultsPage } from '@/f
 import { EditProfilePage, SecurityPage } from '@/features/app/player-profile/ProfileForms'
 import { DashboardPage } from '@/features/app/dashboard/pages/DashboardPage'
 import { DesignSystemPage } from '@/features/design-system/pages/DesignSystemPage'
+import { ClubEventsPage } from '@/features/club/events/ClubEventsPage'
 import { EventsListPage } from '@/features/app/events/pages/EventsListPage'
 import { EventsLocationPage } from '@/features/app/events/pages/EventsLocationPage'
 import { EventDetailPage } from '@/features/app/events/pages/EventDetailPage'
@@ -108,6 +109,8 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route errorElement={<StartupRouteError />}>
         <Route path="/billing/return" element={<StartupReady><CheckoutReturnPage /></StartupReady>} />
         <Route path="/club/settings" element={<ProtectedRoute><StartupReady><MyClubPage /></StartupReady></ProtectedRoute>} />
+        <Route path="/club/events" element={<ProtectedRoute><StartupReady><ClubEventsPage /></StartupReady></ProtectedRoute>} />
+        <Route path="/club/events/:eventId/*" element={<ProtectedRoute><StartupReady><ClubEventsPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/plan" element={<ProtectedRoute><StartupReady><ClubPlanPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/settings/info" element={<ProtectedRoute><StartupReady><ClubInfoPage /></StartupReady></ProtectedRoute>} />
         <Route path="/club/settings/info/preview" element={<ProtectedRoute><StartupReady><ClubPublicProfilePage preview /></StartupReady></ProtectedRoute>} />

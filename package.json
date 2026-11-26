@@ -6,6 +6,7 @@
   "scripts": {
     "test:venues": "node scripts/test-venues.cjs",
     "test:category-policy": "node scripts/test-category-policy.cjs",
+    "test:divisions": "node scripts/test-divisions.cjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

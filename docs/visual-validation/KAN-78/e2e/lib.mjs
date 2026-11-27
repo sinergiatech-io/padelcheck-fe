@@ -30,8 +30,8 @@ export async function shot(page, name, full = false) {
   await page.screenshot({ path: `${SHOTS}/${name}.png` })
   await page.setViewportSize(size)
 }
-export async function steps1to3(page, name) {
-  await page.goto(BASE + '/club/events/new')
+export async function steps1to3(page, name, load = true) {
+  if (load) await page.goto(BASE + '/club/events/new')
   await page.getByLabel('Nombre del evento').fill(name)
   await page.getByLabel('Fecha de inicio').fill('2026-12-10')
   await page.getByLabel('Fecha de finalización').fill('2026-12-12')

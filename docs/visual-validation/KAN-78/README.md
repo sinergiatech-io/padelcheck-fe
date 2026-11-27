@@ -56,11 +56,35 @@ Diferencias intencionales / notas:
   «Combinado · Mixto 6ta + 7ma»).
 - Desde 768 px solo es regresión (`50-hub-*`, `51-edit-*`, `52-step4-*`): columna centrada sin roturas.
 
+## Ronda 2 (27/11/2026, correcciones de revisión)
+
+Service PR #34 en `87bb90d` (jar con V36 aplicada sobre la DB e2e: los 10 eventos existentes conservaron
+sus fechas), FE en esta rama. Los 4 journeys anteriores se repitieron contra esta API y pasan
+(`admin`, `staff`, `limits` con regresión 767/768/1024, `extra`); sus pantallas no cambian.
+
+| Script | Qué verifica |
+|---|---|
+| `e2e/round2.mjs` | Entrada in-app al wizard; Combinado **6ta + 6ta** Mixto y Suma 13; la respuesta de confirmación se demora, **Atrás del navegador** durante el guardado no cambia la URL ni desmonta el paso 6 (sigue «Creando evento»); al liberar → éxito, y Atrás vuelve a funcionar. Con carga directa de `/club/events/new` el navegador pide confirmación (`beforeunload`), se descarta y el formulario sigue. La API devuelve el borrador **sin ventana** (`registrationOpenAt/CloseAt = null`) y los nombres `Mixto · 6ta + 6ta` / `Caballeros · Suma 13`; el hub los muestra; editar B a 7ma → API `Mixto · 6ta + 7ma`, y de vuelta a `6ta + 6ta`; un nombre personalizado se muestra y se conserva al editar. Control negativo: sin el guardia el test falla (`URL kept while saving`). |
+
+| Estado | Figma (equivalente) | Web |
+|---|---|---|
+| Paso 4 Combinado misma categoría | `3088-32245` (Combinado) | `60` |
+| Paso 6 Combinado + Suma | `3088-33626` | `61` |
+| Atrás retenido mientras guarda | `3088-33952` (Creando) | `62` |
+| Éxito tras Atrás retenido | `3090-33794` | `63` |
+| Hub con 6ta + 6ta | `3089-32762` | `64` |
+| Editar Combinado 6ta + 6ta | `3090-33678` | `65` |
+| Hub con nombre personalizado | `3089-32762` | `66` (título = nombre del organizador) |
+
+Suma: misma tabla de niveles que el service (`1RA`→1 … `8VA`→8). Con el catálogo actual todo entero 2–16
+es formable; un objetivo dentro del rango que dos categorías no puedan formar muestra «Esta suma no se
+puede formar con dos categorías del catálogo.» (cubierto por `tests/divisions.test.cjs`).
+
 ## Reproducir
 
 1. Service: `mvn -DskipTests package` en la rama del PR #34 y
    `java -jar target/padelcheck-service-0.1.0-SNAPSHOT.jar --spring.profiles.active=local --server.port=8178 --spring.datasource.url=<postgres local> --app.cors.allowed-origin-patterns=http://127.0.0.1:5178 --app.google.enabled=false`;
    aplicar `e2e/seed.sql`.
 2. FE: `VITE_APP_ENV=local VITE_API_BASE_URL=http://localhost:8178/api npx vite --port 5178`.
-3. `node e2e/admin.mjs && node e2e/staff.mjs && node e2e/limits.mjs && node e2e/extra.mjs`
+3. `node e2e/admin.mjs && node e2e/staff.mjs && node e2e/limits.mjs && node e2e/extra.mjs && node e2e/round2.mjs`
    (ajustar `SHOTS` y la conexión en `e2e/lib.mjs`).

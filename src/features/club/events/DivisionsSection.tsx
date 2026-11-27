@@ -7,6 +7,7 @@ import hubEmpty from '@/assets/club-events/hub-empty.svg'
 import modalClose from '@/assets/club-events/modal-close.svg'
 import { Shell, danger, primary, secondary } from './EventShell'
 import { divisionApi } from './division-api'
+import { DivisionRegistration } from './DivisionRegistration'
 import {
   activeDivisions, catalogNames, savedTitle, criterionLabel, divisionTitle, divisionWrite, emptySelection, errorCode, limitReason, planLimitRemaining,
   remainingQuota, savedCatalog, selectionSize, selectionSummary, toSelection, toWrites, validCriterion, validMaxPairs,
@@ -173,17 +174,23 @@ export function DivisionScreen({ clubId, event, divisionId }: { clubId: string; 
     </Shell>
   }
   const readOnly = event.status !== 'DRAFT' || division?.status === 'CANCELLED' || !location.pathname.endsWith(divisionId ? '/edit' : '/new')
-  if (division && readOnly) return <DivisionView event={event} division={division} leave={leave} />
+  if (division && readOnly) return <DivisionView clubId={clubId} event={event} division={division} leave={leave} />
   return <DivisionEditor key={division?.id ?? 'new'} clubId={clubId} event={event} division={division} leave={leave}
     activeCount={activeDivisions(divisions.data ?? []).length} />
 }
 
-function DivisionView({ event, division, leave }: { event: ClubEventDetail; division: Division; leave: () => void }) {
+function DivisionView({ clubId, event, division, leave }: { clubId: string; event: ClubEventDetail; division: Division; leave: () => void }) {
   const selection = toSelection([divisionWrite(division)])
+  const admin = useAdmin(clubId)
+  const showRegistration = division.status !== 'CANCELLED' &&
+    (event.status === 'INSCRIPTION_OPEN' || event.status === 'INSCRIPTION_CLOSED')
   return <Shell title="Consultar división" wizard back={leave} footer={<Button className={primary} onClick={leave}>Volver al evento</Button>}>
     <p className="text-xs text-[#605e64]">{division.status === 'CANCELLED' ? 'Categoría cancelada' : statusLabels[event.status]}</p>
     <h2 className="text-xl font-bold leading-7">{savedTitle(division)}</h2>
     <p className="text-sm font-medium text-[#605e64]">{selectionSummary(selection, savedCatalog(division))}</p>
+    {showRegistration && <DivisionRegistration key={clubId + '/' + event.id + '/' + division.id}
+      scope={{ clubId, eventId: event.id, divisionId: division.id }}
+      open={event.status === 'INSCRIPTION_OPEN' && division.status === 'INSCRIPTION_OPEN'} admin={admin} />}
     <QuotaFields selection={selection} set={() => undefined} touched={false} fixed />
   </Shell>
 }

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
 import logo from '@/assets/auth/logo.png'
@@ -41,6 +41,18 @@ export function DivisionWizard({ clubId, draft, back, plan, setPlan }: {
   const categories = catalog.data ?? []
   const names = catalogNames(categories)
   const { step, selection, divisions } = plan
+  // While the confirmation is in flight, browser Back (or any route change) must not unmount the wizard:
+  // the navigation is held and cancelled once the save settles, so the result is always shown.
+  const blocker = useBlocker(busy)
+  useEffect(() => {
+    if (blocker.state === 'blocked' && !busy) blocker.reset()
+  }, [blocker, busy])
+  useEffect(() => {
+    if (!busy) return
+    const hold = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', hold)
+    return () => window.removeEventListener('beforeunload', hold)
+  }, [busy])
   const set = (next: Selection) => { setOverflow(false); setPlan(value => ({ ...value, selection: next })) }
 
   const others = divisions.filter(division => !plan.editing?.includes(division.localId)).length

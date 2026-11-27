@@ -8,8 +8,8 @@ import modalClose from '@/assets/club-events/modal-close.svg'
 import { Shell, danger, primary, secondary } from './EventShell'
 import { divisionApi } from './division-api'
 import {
-  activeDivisions, catalogNames, criterionLabel, divisionTitle, divisionWrite, emptySelection, errorCode, limitReason, planLimitRemaining,
-  remainingQuota, savedCatalog, savedNames, selectionSize, selectionSummary, toSelection, toWrites, validCriterion, validMaxPairs,
+  activeDivisions, catalogNames, savedTitle, criterionLabel, divisionTitle, divisionWrite, emptySelection, errorCode, limitReason, planLimitRemaining,
+  remainingQuota, savedCatalog, selectionSize, selectionSummary, toSelection, toWrites, validCriterion, validMaxPairs,
   validSelection, type Division, type Selection,
 } from './division-model'
 import { Banner, CardAction, CardActions, CatalogState, CriterionFields, DivisionCard, LimitBanner, QuotaFields } from './division-ui'
@@ -73,7 +73,7 @@ export function DivisionsSection({ clubId, event }: { clubId: string; event: Clu
       {editable && <p className="max-w-48 text-left text-xs leading-4">Agregá una categoría para publicar el evento o abrir la inscripción.</p>}
     </div>}
     {active.map(division => {
-      const title = divisionTitle(division, savedNames(division))
+      const title = savedTitle(division)
       return <div key={division.id} className="flex flex-col gap-2">
         <DivisionCard title={title} maxPairs={division.maxPairs} type={criterionLabel(division)} substitutes={division.substitutesAllowed} />
         <CardActions>
@@ -90,7 +90,7 @@ export function DivisionsSection({ clubId, event }: { clubId: string; event: Clu
     })}
     {history.length > 0 && <div className="flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-[#605e64]">Canceladas</h3>
-      {history.map(division => <DivisionCard key={division.id} muted title={divisionTitle(division, savedNames(division))} maxPairs={division.maxPairs}
+      {history.map(division => <DivisionCard key={division.id} muted title={savedTitle(division)} maxPairs={division.maxPairs}
         type={criterionLabel(division)} substitutes={division.substitutesAllowed}
         footer={<p className="border-t border-[#e7e7e8] px-4 py-3 text-xs leading-4 text-[#605e64]"><strong className="block text-sm text-[#b51e15]">Categoría cancelada</strong>Historial conservado. Las demás categorías no cambian.</p>} />)}
     </div>}
@@ -136,7 +136,7 @@ function CancelDivisionDialog({ clubId, eventId, division, close, done }: {
       <button type="button" disabled={busy} aria-label="Cerrar" onClick={close}><img src={modalClose} alt="" /></button>
     </header>
     <div className="flex flex-col gap-4 p-4">
-      <p className="text-base font-semibold">{divisionTitle(division, savedNames(division))}</p>
+      <p className="text-base font-semibold">{savedTitle(division)}</p>
       <p className="text-sm text-[#605e64]">Se conservará su historial y las demás categorías del evento no se modificarán.</p>
       {busy && <Banner tone="loading" title="Cancelando categoría">Esperá a que termine la operación.</Banner>}
       {error && <Banner tone="error" title="No pudimos cancelar">La categoría sigue activa. Volvé a intentar.</Banner>}
@@ -182,7 +182,7 @@ function DivisionView({ event, division, leave }: { event: ClubEventDetail; divi
   const selection = toSelection([divisionWrite(division)])
   return <Shell title="Consultar división" wizard back={leave} footer={<Button className={primary} onClick={leave}>Volver al evento</Button>}>
     <p className="text-xs text-[#605e64]">{division.status === 'CANCELLED' ? 'Categoría cancelada' : statusLabels[event.status]}</p>
-    <h2 className="text-xl font-bold leading-7">{divisionTitle(division, savedNames(division))}</h2>
+    <h2 className="text-xl font-bold leading-7">{savedTitle(division)}</h2>
     <p className="text-sm font-medium text-[#605e64]">{selectionSummary(selection, savedCatalog(division))}</p>
     <QuotaFields selection={selection} set={() => undefined} touched={false} fixed />
   </Shell>

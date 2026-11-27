@@ -5,9 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SearchFieldIcon } from '@/components/icons/SearchFieldIcon'
 import { useAuth } from '@/context/AuthContext'
-import { ClubBottomNav } from '../category-policy/ClubBottomNav'
 import { Notice } from '../venues/ClubVenuesPage'
-import backIcon from '@/assets/venues/back.svg'
 import editIcon from '@/assets/venues/edit.svg'
 import listPin from '@/assets/club-events/list-pin.svg'
 import listDate from '@/assets/club-events/list-date.svg'
@@ -16,7 +14,6 @@ import hubPin from '@/assets/club-events/hub-pin.svg'
 import hubDate from '@/assets/club-events/hub-date.svg'
 import hubPrice from '@/assets/club-events/hub-price.svg'
 import hubMenu from '@/assets/club-events/hub-menu.svg'
-import hubEmpty from '@/assets/club-events/hub-empty.svg'
 import hubCalendarNotice from '@/assets/club-events/hub-calendar-notice.svg'
 import hubCancelled from '@/assets/club-events/hub-cancelled.svg'
 import menuOpen from '@/assets/club-events/menu-open.svg'
@@ -24,23 +21,21 @@ import menuPublish from '@/assets/club-events/menu-publish.svg'
 import menuEdit from '@/assets/club-events/menu-edit.svg'
 import menuCancel from '@/assets/club-events/menu-cancel.svg'
 import modalClose from '@/assets/club-events/modal-close.svg'
-import { categoryCount, hubNotice, statusBackground } from './hub-model'
+import { hubNotice, statusBackground } from './hub-model'
 import { clubEvents } from './event-api'
 import {
   availableInfrastructure, customNotice, eventDates, eventPrice, isCancellable, presets, statusLabels, toggleChoice, toggleVenue,
   validEventDates, validInfrastructure, venueLocation, type ClubEvent, type ClubEventDetail, type EventDraft,
 } from './event-model'
 import { detailKey, listKey, useEventDetail, useEventList, useEventSearch, useEventWizard } from './use-club-events'
+import { Retry, Shell, danger, field, primary, secondary } from './EventShell'
+import { DivisionWizard } from './DivisionWizard'
+import { initialPlan, resumePlan, type DivisionPlan } from './division-model'
+import { DivisionScreen, DivisionsSection } from './DivisionsSection'
 
 const ROOT = '/club/events'
-const field = 'mt-2 h-14 rounded-lg border-[#929195] bg-[#fefefe] px-4 text-sm shadow-none'
-const primary = 'h-12 w-full rounded-lg'
-const secondary = 'h-12 rounded-lg border-0 bg-[#f8f8e9] text-[#646707] hover:bg-[#eef0c1]'
-const danger = 'h-12 rounded-lg border-0 bg-[#fdecec] text-[#b51e15] hover:bg-[#fac5c5]'
 
-type WizardContinuation = (draft: EventDraft, back: () => void) => ReactNode
-
-export function ClubEventsPage({ continuation }: { continuation?: WizardContinuation }) {
+export function ClubEventsPage() {
   const { user, destination } = useAuth()
   const { eventId, '*': rest } = useParams()
   if (destination?.kind !== 'club') return <Navigate to="/app" replace />
@@ -49,34 +44,9 @@ export function ClubEventsPage({ continuation }: { continuation?: WizardContinua
   if (!permissions?.includes('MANAGE_TOURNAMENTS')) {
     return <Shell title="Eventos"><Notice error>No tenés permiso para gestionar los eventos de este club.</Notice></Shell>
   }
-  if (eventId === 'new') return <Wizard key={clubId} clubId={clubId} continuation={continuation} />
-  if (eventId) return <EventScreen key={clubId + ':' + eventId} clubId={clubId} eventId={eventId} editing={rest === 'edit'} />
+  if (eventId === 'new') return <Wizard key={clubId} clubId={clubId} />
+  if (eventId) return <EventScreen key={clubId + ':' + eventId} clubId={clubId} eventId={eventId} rest={rest ?? ''} />
   return <EventList key={clubId} clubId={clubId} />
-}
-
-function Shell({ title, children, footer, back, headerAction, hub = false, wizard = false }: {
-  title: string; children: ReactNode; footer?: ReactNode; back?: () => void; headerAction?: ReactNode; hub?: boolean; wizard?: boolean
-}) {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const initials = [user?.firstName, user?.lastName].map(name => name?.[0] ?? '').join('')
-  return <div className="flex h-dvh flex-col bg-[#f6f6f6] text-[#120f18]">
-    <header className="shrink-0 bg-[#120f18] text-[#fefefe]">
-      <div className="mx-auto flex h-14 max-w-xl items-center gap-2 px-4">
-        {back && <button type="button" onClick={back} aria-label="Volver" className="flex h-10 w-8 items-center justify-center"><img src={backIcon} alt="" /></button>}
-        <h1 className="flex-1 truncate text-xl font-bold">{title}</h1>
-        {headerAction}
-        {!back && initials && <span className="mr-1 flex size-8 items-center justify-center rounded-full bg-[#c9cf38] text-xs font-medium text-[#120f18]">{initials}</span>}
-      </div>
-    </header>
-    <main className={'flex-1 overflow-y-auto ' + (wizard ? 'bg-[#fefefe]' : '')}>
-      <div className={'mx-auto flex max-w-xl flex-col pb-6 ' + (hub ? 'gap-7 pt-5 ' : 'gap-4 pt-6 ') + (wizard ? 'px-8' : 'px-4')}>{children}</div>
-    </main>
-    {footer && <footer className={'shrink-0 px-8 pb-6 pt-4 ' + (wizard ? 'bg-[#fefefe]' : '')}>
-      <div className="mx-auto max-w-[32rem]">{footer}</div>
-    </footer>}
-    {!wizard && <ClubBottomNav selectedLabel="Eventos" onDashboard={() => navigate('/app')} onClub={() => navigate('/club/settings')} />}
-  </div>
 }
 
 function EventList({ clubId }: { clubId: string }) {
@@ -126,15 +96,15 @@ function EventCard({ event }: { event: ClubEvent }) {
   </article>
 }
 
-function Retry({ children, retry }: { children: ReactNode; retry: () => void }) {
-  return <Notice error>{children} <button type="button" className="font-semibold underline" onClick={retry}>Reintentar</button></Notice>
-}
-
-function EventScreen({ clubId, eventId, editing }: { clubId: string; eventId: string; editing: boolean }) {
+function EventScreen({ clubId, eventId, rest }: { clubId: string; eventId: string; rest: string }) {
   const query = useEventDetail(clubId, eventId)
   const navigate = useNavigate()
   const event = query.data
-  if (event && editing && event.status === 'DRAFT') return <Wizard clubId={clubId} event={event} />
+  if (event && rest === 'edit' && event.status === 'DRAFT') return <Wizard clubId={clubId} event={event} />
+  const divisionRoute = /^divisions\/(new|[\w-]+)(\/edit)?$/.exec(rest)
+  if (event && divisionRoute) {
+    return <DivisionScreen key={rest} clubId={clubId} event={event} divisionId={divisionRoute[1] === 'new' ? null : divisionRoute[1]} />
+  }
   const error = query.isError && <div className="flex flex-col gap-7">
     <Notice error><strong>No pudimos cargar el evento</strong><br />Volvé a intentar para ver su información.</Notice>
     <Button className={primary} onClick={() => void query.refetch()}>Reintentar</Button>
@@ -171,7 +141,6 @@ function EventHub({ clubId, event, loadError }: { clubId: string; event: ClubEve
   const pending = useRef(false)
   const more = useRef<HTMLButtonElement>(null)
   const notice = hubNotice(event)
-  const editable = event.status === 'DRAFT'
   const cancellable = isCancellable(event.status)
 
   function dismissDialog() {
@@ -211,16 +180,7 @@ function EventHub({ clubId, event, loadError }: { clubId: string; event: ClubEve
       <div><strong className="block text-sm leading-5">{notice.title}</strong><p className="text-xs leading-4 text-[#605e64]">{notice.detail}</p></div>
     </div>}
     {event.schedulingMode && <p className="text-sm text-[#605e64]">Programación {event.schedulingMode === 'AUTO' ? 'automática' : 'manual'}</p>}
-    <section aria-label="Categorías" className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Categorías</h2>
-        {event.divisionCount > 0 && <span className="text-xs text-[#605e64]">{categoryCount(event.divisionCount)}</span>}
-      </div>
-      {event.divisionCount === 0 && <div className="flex flex-col items-center gap-1 rounded-2xl border border-[#dedde0] bg-[#fefefe] p-2 text-center text-sm text-[#605e64]">
-        <img src={hubEmpty} alt="" /><p className="font-medium">Todavía no hay categorías</p>
-        {editable && <p className="max-w-48 text-left text-xs leading-4">Agregá una categoría para publicar el evento o abrir la inscripción.</p>}
-      </div>}
-    </section>
+    <DivisionsSection clubId={clubId} event={event} />
     {sheet && cancellable && <EventActionSheet event={event} close={() => setSheet(false)}
       edit={() => navigate(ROOT + '/' + event.id + '/edit')}
       cancel={() => { setSheet(false); setError(false); setConfirm(true) }} />}
@@ -281,7 +241,7 @@ function CancelDialog({ event, busy, error, close, cancel }: {
   </dialog>
 }
 
-function Wizard({ clubId, event, continuation }: { clubId: string; event?: ClubEventDetail; continuation?: WizardContinuation }) {
+function Wizard({ clubId, event }: { clubId: string; event?: ClubEventDetail }) {
   const navigate = useNavigate()
   const cache = useQueryClient()
   const { step, setStep, draft, setDraft, calendar, preview, infrastructure } = useEventWizard(clubId, event)
@@ -289,6 +249,7 @@ function Wizard({ clubId, event, continuation }: { clubId: string; event?: ClubE
   const [invalid, setInvalid] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
+  const [plan, setPlan] = useState<DivisionPlan>(initialPlan)
   const pending = useRef(false)
   const options = infrastructure.data ?? []
   const selected = options.filter(venue => draft.venueIds.includes(venue.id))
@@ -312,6 +273,7 @@ function Wizard({ clubId, event, continuation }: { clubId: string; event?: ClubE
       return
     }
     if (!event) {
+      setPlan(value => ({ ...resumePlan(value), step: 4 }))
       setStep(4)
       return
     }
@@ -332,7 +294,7 @@ function Wizard({ clubId, event, continuation }: { clubId: string; event?: ClubE
     }
   }
 
-  if (step === 4 && continuation) return continuation(draft, back)
+  if (step === 4 && !event) return <DivisionWizard clubId={clubId} draft={draft} back={back} plan={plan} setPlan={setPlan} />
   const disabled = step === 2 && !draft.playCalendarPreset || step === 3 &&
     (!infrastructure.data || !validInfrastructure(draft, infrastructure.data))
   return <Shell title={event ? 'Editar evento' : 'Crear evento'} wizard back={back}
@@ -383,6 +345,5 @@ function Wizard({ clubId, event, continuation }: { clubId: string; event?: ClubE
       </>}
       {error && <Notice error>No pudimos guardar el evento. Tus cambios siguen disponibles para reintentar.</Notice>}
     </>}
-    {step === 4 && <><h2 className="font-semibold">Categorías</h2><Notice>La configuración de categorías todavía no está disponible.</Notice></>}
   </Shell>
 }

@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowForwardIcon } from '@/components/icons/TournamentCardIcons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search } from 'lucide-react'
+import { CircleX, Search } from 'lucide-react'
 import { categoryLabel, genderOptions, usePlayerSearch } from './use-player-search'
 
 function Filter({ current, label, onClick }: { current: boolean; label: string; onClick: () => void }) {
@@ -20,6 +20,7 @@ export function PlayersPage() {
   const rawCategory = params.get('categoryId') ?? ''
   const categoryId = /^[a-f\d-]{36}$/i.test(rawCategory) ? rawCategory : undefined
   const { categories, results, active, rows } = usePlayerSearch({ query, gender, categoryId })
+  const categoryOptions = categories.data?.slice().reverse()
   function update(key: string, next?: string) {
     setParams(current => {
       const updated = new URLSearchParams(current)
@@ -28,7 +29,7 @@ export function PlayersPage() {
       return updated
     }, { replace: true })
   }
-  return <div className="-mx-4 -mt-4 min-h-[70dvh] bg-[#f2f2f3] p-4 md:mx-auto md:mt-0 md:max-w-[560px]">
+  return <div className="-mx-4 -mt-4 min-h-[calc(100dvh-120px)] bg-[#f2f2f3] p-4 md:mx-auto md:mt-0 md:min-h-[70dvh] md:max-w-[560px]">
     <div className="relative">
       <Search size={16} className="pointer-events-none absolute left-4 top-4 text-[#929195]" />
       <Input type="search" aria-label="Buscar jugadores" placeholder="Buscar jugadores…" maxLength={128}
@@ -40,21 +41,34 @@ export function PlayersPage() {
     </div>
     <div className="mt-2 flex gap-2 overflow-x-auto" role="group" aria-label="Filtrar por categoría">
       <Filter label="Todos" current={!categoryId} onClick={() => update('categoryId')} />
-      {categories.data?.map(category => <Filter key={category.id} label={category.name} current={categoryId === category.id} onClick={() => update('categoryId', category.id)} />)}
+      {categoryOptions?.map(category => <Filter key={category.id} label={category.name} current={categoryId === category.id} onClick={() => update('categoryId', category.id)} />)}
     </div>
     {categories.isError && <div className="mt-3 flex items-center justify-between gap-2 text-sm" role="status">
       <p>No pudimos cargar las categorías.</p><Button variant="link" onClick={() => { void categories.refetch() }}>Reintentar</Button>
     </div>}
     {!active && <p role="status" className="py-5 text-sm text-[#605e64]">Buscá por nombre o elegí un filtro.</p>}
-    {active && results.isPending && <div role="status" aria-label="Buscando jugadores" className="mt-3 space-y-1">
-      {[1, 2, 3, 4].map(id => <div key={id} className="h-16 rounded-lg bg-divider motion-safe:animate-pulse" />)}
+    {active && results.isPending && <div role="status" aria-label="Buscando jugadores" className="mt-3 space-y-2">
+      {[1, 2, 3, 4, 5].map(id => <div key={id} className="flex h-[66px] items-center gap-3 rounded-xl border border-divider bg-white px-3 motion-safe:animate-pulse">
+        <div className="size-10 rounded-full bg-divider" />
+        <div className="space-y-2">
+          <div className="h-3.5 w-[140px] rounded bg-divider" />
+          <div className="h-2.5 w-[90px] rounded bg-divider" />
+        </div>
+      </div>)}
     </div>}
-    {active && results.isError && <div role="status" className="mt-3 rounded-lg bg-white p-4 text-sm">
-      <p>No pudimos cargar los jugadores. Revisá tu conexión.</p>
-      <Button variant="link" className="mt-2" onClick={() => { void results.refetch() }}>Reintentar</Button>
+    {active && results.isError && <div className="mt-3">
+      <div role="status" className="flex flex-col items-center gap-1 rounded-2xl border border-divider bg-white p-2 text-[#605e64]">
+        <CircleX size={20} aria-hidden="true" />
+        <p className="text-sm font-medium">No pudimos cargar jugadores</p>
+        <p className="max-w-[176px] text-xs text-muted-foreground">Revisá tu conexión e intentá de nuevo.</p>
+      </div>
+      <Button size="lg" className="mt-3 w-full rounded-lg" loading={results.isFetching}
+        onClick={() => { void results.refetch({ cancelRefetch: false }) }}>Reintentar</Button>
     </div>}
-    {active && results.isSuccess && !rows.length && <div role="status" className="mt-3 space-y-1 rounded-lg bg-white p-4 text-sm">
-      <p className="font-semibold">Sin resultados</p><p className="text-[#605e64]">Probá con otro nombre o cambiá los filtros.</p>
+    {active && results.isSuccess && !rows.length && <div role="status" className="mt-3 flex min-h-[106px] flex-col items-center justify-center gap-1 rounded-2xl border border-divider bg-white p-2 text-[#605e64]">
+      <Search size={20} aria-hidden="true" />
+      <p className="text-sm font-medium">Sin resultados</p>
+      <p className="max-w-[176px] text-xs text-muted-foreground">Probá con otro nombre o cambiá los filtros.</p>
     </div>}
     <ul className="mt-3 divide-y divide-[#f2f2f3] overflow-hidden rounded-t-xl">
       {rows.map(player => <li key={player.playerId}>

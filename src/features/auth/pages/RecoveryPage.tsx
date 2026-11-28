@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRecovery } from '../use-recovery'
+import type { RecoveryPurpose } from '../recovery-machine'
 import { recoveryCopy } from '../recovery-copy'
 import { takeRecoveryProof } from '../recovery-proof'
 import { Input } from '@/components/ui/input'
@@ -12,14 +13,15 @@ import eyeOn from '@/assets/auth/eye-on.svg?url'
 import success from '@/assets/auth/register-success.svg?url'
 import './recovery.css'
 
-export function RecoveryPage({ reset = false }: { reset?: boolean }) {
+export function RecoveryPage({ reset = false, purpose = 'recovery' }: { reset?: boolean; purpose?: RecoveryPurpose }) {
   // The wrapper is keyed by route; switching to email cannot retain an old proof.
-  return <RecoveryForm key={reset ? 'reset' : 'request'} reset={reset} />
+  return <RecoveryForm key={purpose + '-' + reset} reset={reset} purpose={purpose} />
 }
-function RecoveryForm({ reset }: { reset: boolean }) {
-  const [token] = useState(() => reset ? takeRecoveryProof() : undefined)
-  const { machine, state, blocked } = useRecovery('WEB', token)
-  const copy = recoveryCopy(state)
+function RecoveryForm({ reset, purpose }: { reset: boolean; purpose: RecoveryPurpose }) {
+  const invitation = purpose === 'invitation'
+  const [token] = useState(() => reset ? takeRecoveryProof(invitation ? '/activate-player' : '/reset-password') : undefined)
+  const { machine, state, blocked } = useRecovery('WEB', token, purpose)
+  const copy = recoveryCopy(state, purpose)
   const navigate = useNavigate()
   const title = useRef<HTMLHeadingElement>(null)
   const [visible, setVisible] = useState<Record<string, boolean>>({})
@@ -34,7 +36,7 @@ function RecoveryForm({ reset }: { reset: boolean }) {
   const leave = (path: string) => { machine.cancel(); navigate(path, { replace: true }) }
   const submit = async () => {
     if (state.stage === 'success') return leave('/login')
-    if (state.stage === 'invalid') return leave('/forgot-password')
+    if (state.stage === 'invalid') return leave(invitation ? '/request-player-invitation' : '/forgot-password')
     await machine.run()
     document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
   }
@@ -48,7 +50,7 @@ function RecoveryForm({ reset }: { reset: boolean }) {
           <h1 ref={title} tabIndex={-1}>{copy.title}</h1>
           {copy.detail && <p>{copy.detail}</p>}
           {state.notice && <div role="alert" className="recovery-notice"><strong>{state.notice}</strong><p>{state.retryAt > Date.now() ? 'Intentá de nuevo cuando termine el límite indicado por el servidor.' : state.stage === 'request' ? 'Intentá de nuevo en unos minutos.' : 'Intentá de nuevo.'}</p></div>}
-          {state.stage === 'success' && <div role="status" className="recovery-success"><img src={success} alt="" /><div><strong>Dos formas de ingresar</strong><p>Podés usar tu email y contraseña. Si vinculaste Google, también sigue disponible.</p></div></div>}
+          {state.stage === 'success' && !invitation && <div role="status" className="recovery-success"><img src={success} alt="" /><div><strong>Dos formas de ingresar</strong><p>Podés usar tu email y contraseña. Si vinculaste Google, también sigue disponible.</p></div></div>}
           {keys.map(key => {
             const label = key === 'email' ? 'Email' : key === 'password' ? 'Nueva contraseña' : 'Confirmar contraseña'
             return <div className="recovery-field" key={key}><label htmlFor={key}>{label}</label><div className="relative"><Input id={key} value={state.fields[key]} disabled={state.busy}
@@ -66,6 +68,7 @@ function RecoveryForm({ reset }: { reset: boolean }) {
         <div className="recovery-actions">
           {copy.action && <button type="submit" disabled={blocked || state.stage === 'inspect'} aria-busy={state.busy} aria-label={state.busy ? busyLabel : copy.action} className="recovery-primary"><ButtonLoadingContent loading={state.busy}>{copy.action}</ButtonLoadingContent></button>}
           {state.stage !== 'success' && <button type="button" className="recovery-secondary" onClick={() => leave('/login')}>Volver al acceso</button>}
+          {state.stage === 'request' && !invitation && <button type="button" className="recovery-secondary" onClick={() => leave('/request-player-invitation')}>Solicitar invitación del club</button>}
         </div>
       </form>
     </div>

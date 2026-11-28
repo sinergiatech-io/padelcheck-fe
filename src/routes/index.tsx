@@ -129,6 +129,8 @@ const router = createBrowserRouter(createRoutesFromElements(
         />
         <Route path="/forgot-password" element={<StartupReady><RecoveryPage /></StartupReady>} />
         <Route path="/reset-password" element={<StartupReady><RecoveryPage reset /></StartupReady>} />
+        <Route path="/activate-player" element={<StartupReady><RecoveryPage reset purpose="invitation" /></StartupReady>} />
+        <Route path="/request-player-invitation" element={<StartupReady><RecoveryPage purpose="invitation" /></StartupReady>} />
         <Route path="/auth/google/verify-email" element={<StartupReady><GoogleVerifyEmailPage /></StartupReady>} />
         <Route path={ROUTES.authContinue} element={<ContinueRoute />} />
         <Route path="/register/player" element={<RedirectIfAuthenticated><PlayerRegisterPage /></RedirectIfAuthenticated>} />

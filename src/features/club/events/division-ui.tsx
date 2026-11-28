@@ -24,10 +24,10 @@ const tones: Record<Tone, { box: string; icon: string }> = {
 }
 
 /** «Banner estado» of the UI kit: semantic tone, icon, title and supporting text. */
-export function Banner({ tone, title, children }: { tone: Tone; title: string; children?: ReactNode }) {
+export function Banner({ tone, title, children, icon }: { tone: Tone; title: string; children?: ReactNode; icon?: ReactNode }) {
   const style = tones[tone]
   return <div role={tone === 'error' ? 'alert' : 'status'} className={'flex items-center gap-3 rounded-lg border p-3 ' + style.box}>
-    <img src={style.icon} alt="" width={20} height={20} className="shrink-0" />
+    {icon ?? <img src={style.icon} alt="" width={20} height={20} className="shrink-0" />}
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
       <strong className="text-sm font-semibold leading-5 text-[#120f18]">{title}</strong>
       {children && <span className="text-xs leading-4 text-[#605e64]">{children}</span>}

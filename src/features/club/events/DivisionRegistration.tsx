@@ -7,9 +7,12 @@ import pairPlayer from '@/assets/club-events/pair-selected-player.svg'
 import pairRejected from '@/assets/club-events/pair-rejected.svg'
 import pairSearch from '@/assets/club-events/pair-search.svg'
 import { Banner } from './division-ui'
+import { CreatePlayerForm } from './CreatePlayerForm'
 import { useCreateClubPair, useDivisionEntries, usePairPlayerSearch, type Entry, type EntryScope, type PairPlayer } from './club-pair-registration'
 
-export function DivisionRegistration({ scope, open, admin }: { scope: EntryScope; open: boolean; admin: boolean }) {
+export function DivisionRegistration({ scope, open, admin, divisionTitle }: {
+  scope: EntryScope; open: boolean; admin: boolean; divisionTitle: string
+}) {
   const entries = useDivisionEntries(scope)
   const [showModal, setShowModal] = useState(false)
   const [result, setResult] = useState<Entry | null>(null)
@@ -38,7 +41,7 @@ export function DivisionRegistration({ scope, open, admin }: { scope: EntryScope
       </li>)}
     </ul>}
     {open && <Button ref={opener} type="button" onClick={() => { setResult(null); setShowModal(true) }}>Nueva inscripción</Button>}
-    {showModal && <RegistrationDialog scope={scope} admin={admin} close={close} done={entry => {
+    {showModal && <RegistrationDialog scope={scope} admin={admin && open} divisionTitle={divisionTitle} close={close} done={entry => {
       setResult(entry)
       close()
       void entries.refetch()
@@ -46,16 +49,30 @@ export function DivisionRegistration({ scope, open, admin }: { scope: EntryScope
   </section>
 }
 
-function RegistrationDialog({ scope, admin, close, done }: {
-  scope: EntryScope; admin: boolean; close: () => void; done: (entry: Entry) => void
+function RegistrationDialog({ scope, admin, divisionTitle, close, done }: {
+  scope: EntryScope; admin: boolean; divisionTitle: string; close: () => void; done: (entry: Entry) => void
 }) {
+  const [inviteSlot, setInviteSlot] = useState<0 | 1 | null>(null)
+  const [selectionNotice, setSelectionNotice] = useState<string | null>(null)
+  const inviting = useRef(false)
   const dialog = useRef<HTMLDialogElement>(null)
   const { players, select, busy, submitting, error, submit } = useCreateClubPair(scope, done)
+  function leaveInvitation() {
+    if (!inviting.current) setInviteSlot(null)
+  }
+  function acceptInvite(player: PairPlayer, created: boolean) {
+    if (inviteSlot === null) return
+    select(inviteSlot, player)
+    setSelectionNotice(created ? 'Jugador creado. Podés continuar con la inscripción.' : 'Jugador seleccionado.')
+    setInviteSlot(null)
+  }
   useEffect(() => { dialog.current?.showModal() }, [])
   return <dialog ref={dialog} aria-labelledby="club-pair-title" aria-busy={busy}
-    onCancel={event => { event.preventDefault(); if (!submitting.current) close() }}
+    onCancel={event => { event.preventDefault(); if (inviteSlot !== null) leaveInvitation(); else if (!submitting.current) close() }}
     className="max-h-[calc(100dvh-24px)] w-[calc(100%-28px)] max-w-[374px] overflow-hidden rounded-2xl bg-[#fefefe] p-0 text-[#120f18] backdrop:bg-black/40">
-    <form className="flex max-h-[inherit] flex-col" onSubmit={event => { event.preventDefault(); void submit() }}>
+    {inviteSlot !== null ? <CreatePlayerForm scope={scope} divisionTitle={divisionTitle} slot={inviteSlot}
+      pending={inviting} teammateId={players[inviteSlot === 0 ? 1 : 0]?.playerId} close={leaveInvitation} done={acceptInvite} /> :
+    <form className="flex max-h-[inherit] flex-col" onSubmit={event => { event.preventDefault(); setSelectionNotice(null); void submit() }}>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#e5e5e5] pl-4 pr-2">
         <h2 id="club-pair-title" className="text-sm font-semibold">Nueva inscripción</h2>
         <button type="button" className="grid size-9 place-items-center" aria-label="Cerrar" disabled={busy} onClick={close}>
@@ -63,26 +80,31 @@ function RegistrationDialog({ scope, admin, close, done }: {
         </button>
       </header>
       <div className="flex min-h-0 flex-col gap-8 overflow-y-auto px-6 py-6">
+        <p className="text-xs text-[#605e64]">{divisionTitle} · Nueva pareja</p>
         {error && <div className="flex flex-col gap-2">
           <Banner tone="error" title={error.title} icon={<img src={pairRejected} alt="" width={20} height={20} className="shrink-0" />}>
             {error.detail}
           </Banner>
           {error.planLimit && admin && <Link to="/club/plan" className="self-center px-4 py-2 text-sm font-semibold">Ver plan</Link>}
         </div>}
-        <PlayerSlot number={1} player={players[0]} excludeId={players[1]?.playerId} disabled={busy} select={player => select(0, player)} />
-        <PlayerSlot number={2} player={players[1]} excludeId={players[0]?.playerId} disabled={busy} select={player => select(1, player)} />
+        {selectionNotice && <Banner tone="success" title={selectionNotice} />}
+        <PlayerSlot number={1} player={players[0]} excludeId={players[1]?.playerId} disabled={busy}
+          create={admin ? () => setInviteSlot(0) : undefined} select={player => { select(0, player); setSelectionNotice(null) }} />
+        <PlayerSlot number={2} player={players[1]} excludeId={players[0]?.playerId} disabled={busy}
+          create={admin ? () => setInviteSlot(1) : undefined} select={player => { select(1, player); setSelectionNotice(null) }} />
       </div>
       <footer className="mx-6 mb-7 flex shrink-0 gap-3 border-t border-[#e5e5e5] pt-4">
         <Button type="button" variant="secondary" className="h-10 flex-1 rounded-lg border-transparent bg-[#e7e7e8] font-medium text-[#605e64]" disabled={busy} onClick={close}>Cancelar</Button>
         <Button type="submit" className="h-10 flex-1 rounded-lg font-medium disabled:bg-[#eef0c1] disabled:text-[#605e64] disabled:opacity-100"
           loading={busy} loadingLabel="Confirmando inscripción…" disabled={busy || !players[0] || !players[1]}>Confirmar</Button>
       </footer>
-    </form>
+    </form>}
   </dialog>
 }
 
-function PlayerSlot({ number, player, excludeId, disabled, select }: {
-  number: number; player: PairPlayer | null; excludeId?: string; disabled: boolean; select: (player: PairPlayer | null) => void
+function PlayerSlot({ number, player, excludeId, disabled, select, create }: {
+  number: number; player: PairPlayer | null; excludeId?: string; disabled: boolean
+  select: (player: PairPlayer | null) => void; create?: () => void
 }) {
   const [query, setQuery] = useState('')
   const search = usePairPlayerSearch(query, excludeId, !player && !disabled)
@@ -120,6 +142,7 @@ function PlayerSlot({ number, player, excludeId, disabled, select }: {
           </button>
         </li>)}
       </ul>}
+      {create && <Button type="button" variant="ghost" disabled={disabled} onClick={create} className="mt-2">Crear jugador</Button>}
     </div>}
   </div>
 }
